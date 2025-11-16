@@ -21,7 +21,7 @@ async def run():
         # 读取电压
         adc_uv = tools.ADC_AVG(CG.Pin.kg_adc,CG.频率.KG采样次数)
         # 计算克数
-        CG.共享数据.kg.append(
+        CG.共享数据.kg.append_time(
             (adc_uv-零飘uv)   / 每克电压uv + 自重克)
         
         # udp.send(  Config.共享数据.kg.get_new())

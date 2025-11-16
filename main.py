@@ -1,8 +1,13 @@
+import ntptime  # 946684800
+from lib import  my_file,udp    # type: ignore
+
+# ntptime.settime()   # 同步时钟
+
 import time
 import uasyncio
 from machine import  WDT, reset,SPI ,Pin    # type: ignore
 import H桥
-from lib import  my_file,udp,st7796    # type: ignore
+
 import 编码器
 import 显示屏
 import 热电偶
@@ -12,7 +17,7 @@ import 热压
 import 风扇
 from llib.config import CG
 
-
+ 
 
 # wdt = WDT(id=0, timeout=15_000)
 
@@ -45,5 +50,5 @@ async def main():
         # wdt.feed()
         await uasyncio.sleep(6)
 
-
+ 
 uasyncio.run(main())

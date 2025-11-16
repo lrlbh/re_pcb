@@ -16,7 +16,7 @@ async def run():
 
 
 async def work():
-    pwm = (CG.共享数据.热压目标温度 - CG.共享数据.热电耦合温度.get_new()) * 655
+    pwm = (CG.共享数据.热压目标温度 - CG.共享数据.热电耦合温度.get_new()[0]) * 655
     pwm = int(pwm)
     if pwm > 65535:
         pwm = 65535
@@ -34,10 +34,10 @@ async def work():
     # CG.Pin.m_pwm1.duty_u16(kg_pwm)
 
     udp.send(
-        f"温度: {CG.共享数据.热电耦合温度.get_new():.2f}\t"
-        f"kg: {CG.共享数据.kg.get_new():.0f}\t"
-        f"加热电流: {CG.共享数据.功率片电流.get_new():.2f}\t"
-        f"电机电流: {CG.共享数据.电机电流.get_new():.2f}\t"
+        f"温度: {CG.共享数据.热电耦合温度.get_new()[0]:.2f}\t"
+        f"kg: {CG.共享数据.kg.get_new()[0]:.0f}\t"
+        f"加热电流: {CG.共享数据.功率片电流.get_new()[0]:.2f}\t"
+        f"电机电流: {CG.共享数据.电机电流.get_new()[0]:.2f}\t"
         f"目标压力: {CG.共享数据.热压目标压力}"
         f"目标温度: {CG.共享数据.热压目标温度}"
         f"加热PWM: {pwm}"
@@ -54,11 +54,11 @@ async def no_work():
     #     CG.Pin.m_pwm2.duty_u16(65535)
     #     CG.Pin.m_pwm1.duty_u16(65535)
     udp.send(
-        f"温度: {CG.共享数据.热电耦合温度.get_new():.2f}\t"
-        f"kg: {CG.共享数据.kg.get_new():.0f}\t"
-        f"加热电流: {CG.共享数据.功率片电流.get_new():.2f}\t"
-        f"电机电流: {CG.共享数据.电机电流.get_new():.2f}\t"
-        f"风扇转速: {CG.共享数据.fan_read.get_new():.2f}\t"
+        f"温度: {CG.共享数据.热电耦合温度.get_new()[0]:.2f}\t"
+        f"kg: {CG.共享数据.kg.get_new()[0]:.0f}\t"
+        f"加热电流: {CG.共享数据.功率片电流.get_new()[0]:.2f}\t"
+        f"电机电流: {CG.共享数据.电机电流.get_new()[0]:.2f}\t"
+        f"风扇转速: {CG.共享数据.fan_read.get_new()[0]:.2f}\t"
         f"风扇PWM: {CG.共享数据.fan_pwm:.2f}\t"
         f"加热PWM: 0"
     )

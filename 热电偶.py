@@ -81,7 +81,7 @@ async def run():
             k_max = 100000
         
         # 看看ntc温度要不要多测两次
-        CG.共享数据.热电耦合温度.append(k_max+temp.read())
+        CG.共享数据.热电耦合温度.append_time(k_max+temp.read())
         
         # udp.send(CG.共享数据.热电耦合温度.get_new())
         

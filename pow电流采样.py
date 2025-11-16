@@ -31,16 +31,10 @@ async def run():
         电流 /= 100 # 放大倍数
         电流 /= 0.0003 # 阻值
         电流  /= 1 # 线性误差
-        CG.共享数据.功率片电流.append(电流)
+        CG.共享数据.功率片电流.append_time(电流)
         电压 = ret[1]
         电压 *= 33
         电压 /= 1000_000
-        CG.共享数据.输入电压.append(电压)
-        # await asyncio.sleep_ms(CG.频率.POW采样间隔MS)
-        await asyncio.sleep_ms(10)
-        CG.共享数据.t.append_data([电流,电压,CG.Pin.pow_pwm.duty_u16()])  
-        # try:
-        #     CG.共享数据.t.append_data([电流,电压,CG.Pin.pow_pwm.duty_u16()])  
-            
-        # except Exception as e:
-        #     udp.send(e)
+        CG.共享数据.输入电压.append_time(电压)
+        await asyncio.sleep_ms(CG.频率.POW采样间隔MS)
+        

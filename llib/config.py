@@ -1,6 +1,6 @@
 from machine import Pin, ADC, PWM
 from llib import tools
-from llib import tt
+import time
 
 
 class CG:
@@ -35,17 +35,17 @@ class CG:
     class 共享数据:
         字 = []
 
-        热电耦合温度 = tools.环形List(10000)
+        热电耦合温度 = tools.环形List(20000,(0, time.ticks_ms()))
 
-        功率片电流 = tools.环形List(10000)
+        功率片电流 = tools.环形List(20000,(0, time.ticks_ms()))
 
-        输入电压 = tools.环形List(10000)
+        输入电压 = tools.环形List(20000,(0, time.ticks_ms()))
 
-        电机电流 = tools.环形List(10000)
+        电机电流 = tools.环形List(20000,(0, time.ticks_ms()))
 
-        kg = tools.环形List(10000)
+        kg = tools.环形List(20000,(0, time.ticks_ms()))
 
-        fan_read = tools.环形List(10000)
+        fan_read = tools.环形List(20000,(0, time.ticks_ms()))
 
         # 是否进入热压状态
         热压 = True
@@ -56,20 +56,6 @@ class CG:
         焊接目标温度 = 0
 
         fan_pwm = 0
-
-        t = tt.环形内存(
-            320,
-            100,
-            3,
-            5,
-            [25, 25, 65535],
-            [
-                bytes([0x00, 0xFF, 0xFF]),
-                bytes([0x00, 0x00, 0xFF]),
-                bytes([0xff, 0xff, 0xff]),
-            ],
-            bytes([0xFF, 0xFF, 0xFF]),
-        )
 
     class Pin:
         tft_BLK = 10  # 背光
