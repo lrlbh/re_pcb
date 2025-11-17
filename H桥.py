@@ -9,7 +9,7 @@ async def run():
     while True:
         uv = tools.ADC_AVG(CG.Pin.m_adc,CG.频率.H桥样次数) - 零飘
         电流ma = uv / 20 / 50
-        CG.共享数据.电机电流.append_time(电流ma)
+        CG.mem_data.电机电流.append_time(电流ma)
         # udp.send(f"电流:{电流ma}")
         await asyncio.sleep_ms(CG.频率.H桥样间隔MS) 
                                            

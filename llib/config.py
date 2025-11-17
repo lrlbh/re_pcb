@@ -32,7 +32,19 @@ class CG:
         # 风扇参数
         风扇采样间隔 = 1000
 
-    class 共享数据:
+    def m_上():
+        CG.Pin.m_pwm1.duty_u16(0)
+        CG.Pin.m_pwm2.duty_u16(65535)
+
+    def m_下():
+        CG.Pin.m_pwm1.duty_u16(65535)
+        CG.Pin.m_pwm2.duty_u16(0)
+    
+    def m_close():
+        CG.Pin.m_pwm1.duty_u16(65535)
+        CG.Pin.m_pwm2.duty_u16(65535)
+
+    class mem_data:
         字 = []
 
         热电耦合温度 = tools.环形List(20000,(0, time.ticks_ms()))
@@ -47,15 +59,23 @@ class CG:
 
         fan_read = tools.环形List(20000,(0, time.ticks_ms()))
 
-        # 是否进入热压状态
-        热压 = True
+        # 是否进入工作状态
+        work = False
+
+        热压 = False
+        
+        热压退出 = False
 
         热压目标温度 = 240
-        热压目标压力 = 500 * 10
+        热压目标压力 = 500 * 6
+        热压电机关闭电流ma = 40
 
         焊接目标温度 = 0
 
         fan_pwm = 0
+    
+    class disk_data:
+        pass
 
     class Pin:
         tft_BLK = 10  # 背光

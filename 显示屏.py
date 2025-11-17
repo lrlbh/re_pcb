@@ -57,7 +57,7 @@ async def run():
         # st.fill(st.color.亮彩.柠黄)
         st._set_window(0, 0, 319, 99)
         # st._write_data_bytes(st.color.亮彩.天蓝*320 *100)
-        t1, t2 = CG.共享数据.t.get_all_data()
+        t1, t2 = CG.mem_data.t.get_all_data()
         st._write_data_bytes(t1)
         st._write_data_bytes(t2)
         await asyncio.sleep(1)

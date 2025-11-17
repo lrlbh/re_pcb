@@ -31,10 +31,10 @@ async def run():
         电流 /= 100 # 放大倍数
         电流 /= 0.0003 # 阻值
         电流  /= 1 # 线性误差
-        CG.共享数据.功率片电流.append_time(电流)
+        CG.mem_data.功率片电流.append_time(电流)
         电压 = ret[1]
         电压 *= 33
         电压 /= 1000_000
-        CG.共享数据.输入电压.append_time(电压)
+        CG.mem_data.输入电压.append_time(电压)
         await asyncio.sleep_ms(CG.频率.POW采样间隔MS)
         

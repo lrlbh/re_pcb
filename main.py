@@ -1,6 +1,6 @@
 import ntptime  # 946684800
 from lib import  my_file,udp    # type: ignore
-
+# import main1
 # ntptime.settime()   # 同步时钟
 
 import time
