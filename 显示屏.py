@@ -1,4 +1,6 @@
+import time
 from lib import st7796便宜, udp, lcd
+from llib import tools
 from llib.config import CG
 from machine import SPI, Pin
 import asyncio
@@ -47,51 +49,103 @@ async def run():
         逆CS=False,
     )
     await st._init_async()
-    # st._init()
-    st.fill(st.color.蓝)
-    st.txt("阿斯顿", 0, 0, 32)
+    st.def_字符.all += "温度电压流功率校准前后压力风扇转速当前目标热电耦状态热转印热压中焊接加热台℃口范围零飘冷端≈"
+    st.load_bmf("/no_delete/字库.bmf")
+    st.fill(st.color.深灰)
 
-    while True:
-        await asyncio.sleep(1)
-        continue
-        # st.fill(st.color.亮彩.柠黄)
-        st._set_window(0, 0, 319, 99)
-        # st._write_data_bytes(st.color.亮彩.天蓝*320 *100)
-        t1, t2 = CG.mem_data.t.get_all_data()
-        st._write_data_bytes(t1)
-        st._write_data_bytes(t2)
-        await asyncio.sleep(1)
-    st.def_字符.all += "阿斯顿正弦波示例真·左移滚动（整块重绘）"
-    st.load_bmf(
-        "/no_delete/霞鹜_Regular_等宽--阈值114--2500常用+ascii--16_24_32_40_48_56_64_72.bmf"
+    st.txt("状态:", 0, 0, 32, 缓存=False, 背景色=st.color.浅灰)
+    st.txt("热电耦:", 0, 32, 32, 缓存=False, 背景色=st.color.深灰)
+    st.txt("冷端:", 224, 32, 16, 缓存=False, 背景色=st.color.深灰)
+    st.txt("UvMax:", 224, 48, 16, 缓存=False, 背景色=st.color.深灰)
+    st.txt(
+        "{0:4.0f}mV".format(CG.mem.满量程read_uv / 1000),
+        272,
+        48,
+        16,
+        缓存=False,
+        背景色=st.color.深灰,
     )
-
-    # st.load_bmf("/no_delete/字体.bmf",None)
-    # st.show_bmp("/no_delete/pexels-chris-czermak-1280625-2444403.bmp")
-    # st.txt("电阿斯顿压:18.4241234",0,0,32,st.color.基础灰阶.白,st.color.基础灰阶.黑,True)
-
-    # ====== 1) 静态文字 ======
-    # ===== 1) 静态文字（不动） =====
-    # 假设将文字显示在 (0, 0)，高度大约 32 像素
-    text = "123456789ABCDEFGHIJK"  # 初始内容，右侧留空格避免抖动
-    y = 0
-    x = 0
-    CHAR_H = 32
-
-    import time
+    st.txt("校准:", 0, 64, 16, 缓存=False, 背景色=st.color.浅灰)
+    st.txt("k1:", 0, 80, 16, 缓存=False, 背景色=st.color.深灰)
+    st.txt("k2:", 116, 80, 16, 缓存=False, 背景色=st.color.深灰)
+    st.txt("k3:", 232, 80, 16, 缓存=False, 背景色=st.color.深灰)
 
     while True:
-        # 1) 清空这一行显示区域
-        # st._set_window(x, y, st._width-1, y + CHAR_H - 1)
-        # blank = bytearray([0,0,0] * st._width)  # RGB888纯黑背景
-        # for _ in range(CHAR_H):
-        #     st._write_data_bytes(blank)
+        # 工作模式
+        if CG.mem.热压:
+            st.txt("转印|", 80, 0, 32, 缓存=True, 背景色=st.color.浅灰)
+        else:
+            st.txt("焊接|", 80, 0, 32, 缓存=True, 背景色=st.color.浅灰)
 
-        # 2) 显示当前字符串（一次性绘制整行字符）
-        st.txt(text, x, y, CHAR_H, st.color.基础灰阶.白, st.color.基础灰阶.黑, True)
+        # 当前剩余内存
+        st.txt(
+            tools.get_mem_str(),
+            160,
+            0,
+            32,
+            缓存=True,
+            背景色=st.color.浅灰,
+        )
 
-        # 3) 模拟滚动 —— 字符真左移，新字符补到末尾
-        # new_char = "#"   # 你可以换成实时数据
-        # text = text[1:] + new_char
-        udp.send()
-        time.sleep(1)  # 控制速度
+        # 热电偶温度，绿正常，黄超时，红3个热电偶都断线了
+        cl = st.color.绿
+        if (
+            time.ticks_diff(time.ticks_ms(), CG.mem.热电耦平均温度[1])
+            > CG.disk.数据超时ms
+        ):
+            cl = st.color.黄
+        elif CG.mem.热电耦平均温度[0] > 900:
+            cl = st.color.红
+        st.txt(
+            "{:5.1f}℃".format(CG.mem.热电耦平均温度[0]),
+            112,
+            32,
+            32,
+            字体色=cl,
+            缓存=True,
+            背景色=st.color.深灰,
+        )
+
+        # 冷端温度
+        st.txt(
+            "{:5.2f}℃".format(CG.mem.ntc_temp),
+            264,
+            32,
+            16,
+            缓存=True,
+            背景色=st.color.深灰,
+        )
+
+        # 热电偶校准参数
+        w = 40
+        for i in range(3):
+            txt = (
+                "{:3.0f} ".format(CG.mem.k_min[i] + CG.mem.ntc_temp)
+                + "{:3.0f} ".format(CG.mem.k_零飘[i] / 1000)
+                + "{:3.0f}|".format(CG.mem.k_max[i] + CG.mem.ntc_temp)
+            )
+            st.txt(txt, w, 64, 16, 缓存=True, 背景色=st.color.浅灰)
+            w += 96
+
+        # 每路热电偶温度
+        w = 24
+        for i in range(3):
+            txt = "{:06.2f}℃ ".format(CG.mem.热电耦温度.get_new()[i])
+            st.txt(
+                txt,
+                w,
+                80,
+                16,
+                缓存=True,
+                背景色=st.color.深灰,
+            )
+            w += 116
+
+        # st.txt(str(CG.mem_data.热电耦平均温度),112,32,32,缓存=True)
+        # st.txt(str(CG.mem.热电耦温度.get_new()[0]), 112, 32, 32, 缓存=True)
+        # st.txt(str(CG.mem.热电耦温度.get_new()[1]), 112, 64, 32, 缓存=True)
+        # st.txt(str(CG.mem.热电耦温度.get_new()[2]), 112, 96, 32, 缓存=True)
+        # st.txt(str(CG.mem.热电耦平均温度), 112, 128, 32, 缓存=True)
+        # for 温度 in  CG.mem_data.热电耦合温度:
+        #     pass
+        await asyncio.sleep(0.2)

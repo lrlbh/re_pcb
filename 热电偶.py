@@ -15,12 +15,12 @@
 # ADC.ATTN_6DB
 # ADC.ATTN_11DB
 
+import time
 import asyncio
 from llib.config import CG, tools
 from lib import udp, ntc
-
-
-
+import sys
+import io
 
 
 # 短路校准
@@ -32,62 +32,103 @@ from lib import udp, ntc
 # 当然这也会引入两个问题
 # 1、共模电压改变，不过共模电压主要来自K_REF,影响很小
 # 2、MOS内阻，这是主要问题，可以选择低VGSth，低内阻MOS
-async def 短路校准():
+async def 短路校准(满量程电压):
     K_零点 = []
+    max_temp = []
+    min_temp = []
     CG.Pin.k_sw.value(1)
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(0.3)
 
-    # 遍历 ADC
+    # 遍历 ADC，获取：
+    # 零点
+    # 最高温度
+    # 最低温度
     for k in CG.Pin.k_adc:
-        K_零点.append(tools.ADC_AVG(k, CG.频率.K采样校准次数))
+        零点 = tools.ADC_AVG(k, CG.频率.K采样校准次数)
+        K_零点.append(零点)
+        max_temp.append(get_temp(满量程电压 - 零点))
+        min_temp.append(get_temp(零点))
 
     CG.Pin.k_sw.value(0)
 
-    return K_零点
+    return K_零点, max_temp, min_temp
 
 
-async def run():
-    # Config.Pin.k_sw.value(0)
-    # while True:
-    #     await asyncio.sleep_ms(Config.频率.K采样间隔MS)
-    
-    
+async def work():
     # 放大倍数
-    pga = 100
-    
+    pga = 80
+
     # ntc对象
-    temp = ntc.NTC(CG.Pin.k_ntc, 430_000,3_300_000)
-    
+    temp = ntc.NTC(CG.Pin.k_ntc, 430_000, 3_300_000)
+
+    # 标定满量程 read_uv 输出
+    # 如果热电耦合全被使用，提供一个def
+    for k in CG.Pin.k_adc:
+        t_16 = []
+        t_uv = []
+        for _ in range(3):
+            t_16.append(k.read_u16())
+            t_uv.append(k.read_uv())
+        if max(t_16) == 65535:
+            CG.mem.满量程read_uv = max(t_uv)
+            udp.send(f"标定成功：满量程输出{CG.mem.满量程read_uv}")
+            break
+
     # 0飘，先简单在开机时校准
-    k_零点 = await 短路校准()
-    
+    await CG.mem.adj_热电耦(pga, get_temp)
+
     # 重复测试温度
     while True:
         # 设计了3路热电偶，正常只使用1路，所以使用温度最高的热电耦即可
-        k_max = -100000
+        # 这一坨输出没有冷端补偿的温度
+        temp_3 = []
         for index, k in enumerate(CG.Pin.k_adc):
             原始读数 = tools.ADC_AVG(k, CG.频率.K采样次数)
-            校准零飘后 = 原始读数- k_零点[index]
+            校准零飘后 = 原始读数 - CG.mem.k_零飘[index]
             pga后 = 校准零飘后 / pga
-            转为实际温度 = get_temp(pga后)
-            # udp.send(转为实际温度)
-            if 原始读数 > 900_000: # 大于900mv,属于短线检测
+            temp_3.append(get_temp(pga后))
+
+        # 抛弃断线，然后计算平均值
+        n = 0
+        CG.mem.热电耦平均温度[0] = 0
+        for i, temp_i in enumerate(temp_3):
+            # 断线
+            # 可以轻松几度
+            if temp_i == CG.mem.k_max[i]:
                 continue
-            if 转为实际温度 > k_max :
-                k_max = 转为实际温度
-        
-        # 3个都短线，给予一个大的温度值                
-        if k_max < -1000:
-            k_max = 100000
-        
-        # 看看ntc温度要不要多测两次
-        CG.mem_data.热电耦合温度.append_time(k_max+temp.read())
-        
-        # udp.send(CG.共享数据.热电耦合温度.get_new())
-        
+            CG.mem.热电耦平均温度[0] += temp_i
+            n += 1
+        if n > 0:
+            CG.mem.热电耦平均温度[0] /= n
+        else:
+            CG.mem.热电耦平均温度[0] = 920
+
+        # ntc温度
+        CG.mem.ntc_temp = temp.read(100)
+        for i in range(len(temp_3)):
+            temp_3[i] += CG.mem.ntc_temp
+        CG.mem.热电耦平均温度[0] += CG.mem.ntc_temp
+        CG.mem.热电耦平均温度[1] = time.ticks_ms()
+
+        # 存入环形内存
+        temp_3.append(time.ticks_ms())
+        CG.mem.热电耦温度.append(tuple(temp_3))
+
         await asyncio.sleep_ms(CG.频率.K采样间隔MS)
 
- 
+
+async def run():
+    try:
+        await work()
+    except Exception as e:
+        # 捕获完整异常信息（含文件名、行号）
+        buf = io.StringIO()
+        sys.print_exception(e, buf)
+        text = buf.getvalue()
+        udp.send("=== 异常捕获 ===")
+        udp.send(text)
+
+
 # K型热电耦，电压转温度
 def get_temp(uv):
     """

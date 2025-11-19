@@ -17,7 +17,7 @@ import 热压
 import 风扇
 from llib.config import CG
 
- 
+  
 
 # wdt = WDT(id=0, timeout=15_000)
 
@@ -47,7 +47,7 @@ async def main():
                 # 重启设备
                 # reset()
 
-        # wdt.feed()
+        # wdt.feed()                                           
         await uasyncio.sleep(6)
 
  

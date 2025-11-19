@@ -15,12 +15,14 @@ class NTC:
         self.固定电阻 = 固定电阻
         self.型号 = 型号_t
 
-    def read(self):
-        NTC的电压 = self.adc.read_uv() 
+    def read(self, n=1):
+        NTC的电压 = 0
+        for _ in range(n):
+            NTC的电压 += self.adc.read_uv()
+        NTC的电压 /= n
         固定电阻的电压 = self.电路电压uv - NTC的电压
         电流 = 固定电阻的电压 / self.固定电阻
         NTC的电阻 = NTC的电压 / 电流 / 1000
-        # return NTC的电阻
 
         for i, 阻值 in enumerate(self.型号.阻值):
             if 阻值 <= NTC的电阻:

@@ -6,28 +6,28 @@ from lib import udp
 
 
 def 右按钮任务():
-    CG.mem_data.work = not CG.mem_data.work
-    if CG.mem_data.热压:
-        CG.mem_data.热压退出 = True
+    CG.mem.work = not CG.mem.work
+    if CG.mem.热压:
+        CG.mem.热压退出 = True
 
 
 def 左按钮任务():
-    if CG.mem_data.work:
+    if CG.mem.work:
         return
-    CG.mem_data.热压 = not CG.mem_data.热压
+    CG.mem.热压 = not CG.mem.热压
 
     udp.send("右按下")
 
 
 def 编码器右(变化量, *args):
-    CG.mem_data.热压目标温度 += 变化量
+    CG.mem.热压目标温度 += 变化量
 
 
 def 编码器左(变化量, *args):
-    if CG.mem_data.热压:
-        CG.mem_data.热压目标压力 += 变化量 * 10
+    if CG.mem.热压:
+        CG.mem.热压目标压力 += 变化量 * 10
     else:
-        CG.mem_data.fan_pwm += 变化量 * 6550
+        CG.mem.fan_pwm += 变化量 * 6550
 
 
 # 主循环，保持程序运行

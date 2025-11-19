@@ -1,6 +1,7 @@
 from machine import Pin, ADC, PWM
 from llib import tools
 import time
+import asyncio
 
 
 class CG:
@@ -39,43 +40,72 @@ class CG:
     def m_下():
         CG.Pin.m_pwm1.duty_u16(65535)
         CG.Pin.m_pwm2.duty_u16(0)
-    
+
     def m_close():
         CG.Pin.m_pwm1.duty_u16(65535)
         CG.Pin.m_pwm2.duty_u16(65535)
 
-    class mem_data:
+    class K:
+        pass
+
+    class mem:
         字 = []
 
-        热电耦合温度 = tools.环形List(20000,(0, time.ticks_ms()))
+        热电耦平均温度 = [0,0]
+        k_零飘 = []
+        k_max = []
+        k_min = []
+        满量程read_uv = 994000
+        ntc_temp = 0
 
-        功率片电流 = tools.环形List(20000,(0, time.ticks_ms()))
+        async def adj_热电耦(pga, get_temp):
+            CG.mem.k_零飘 = []
+            CG.mem.k_max = []
+            CG.mem.k_min = []
+            CG.Pin.k_sw.value(1)
+            await asyncio.sleep(0.3)
 
-        输入电压 = tools.环形List(20000,(0, time.ticks_ms()))
+            # 遍历 ADC，获取：
+            # 零点
+            # 最高温度
+            # 最低温度
+            for k in CG.Pin.k_adc:
+                零点 = tools.ADC_AVG(k, CG.频率.K采样校准次数)
+                CG.mem.k_零飘.append(零点)
+                CG.mem.k_max.append(get_temp((CG.mem.满量程read_uv - 零点) / pga))
+                CG.mem.k_min.append(get_temp(-零点 / pga))
 
-        电机电流 = tools.环形List(20000,(0, time.ticks_ms()))
+            CG.Pin.k_sw.value(0)
 
-        kg = tools.环形List(20000,(0, time.ticks_ms()))
+        热电耦温度 = tools.环形List(20000, (0, 0, 0, time.ticks_ms()))
 
-        fan_read = tools.环形List(20000,(0, time.ticks_ms()))
+        功率片电流 = tools.环形List(20000, (0, time.ticks_ms()))
+
+        输入电压 = tools.环形List(20000, (0, time.ticks_ms()))
+
+        电机电流 = tools.环形List(20000, (0, time.ticks_ms()))
+
+        kg = tools.环形List(20000, (0, time.ticks_ms()))
+
+        fan_read = tools.环形List(20000, (0, time.ticks_ms()))
 
         # 是否进入工作状态
         work = False
 
         热压 = False
-        
+
         热压退出 = False
 
-        热压目标温度 = 240
+        热压目标温度 = 120
         热压目标压力 = 500 * 6
         热压电机关闭电流ma = 40
 
         焊接目标温度 = 0
 
         fan_pwm = 0
-    
-    class disk_data:
-        pass
+
+    class disk:
+        数据超时ms = 500
 
     class Pin:
         tft_BLK = 10  # 背光
