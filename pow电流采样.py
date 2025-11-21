@@ -21,20 +21,19 @@ import asyncio
 from llib.config import CG
 from llib import tools
 
+
 async def run():
-    零飘 = tools.ADC_AVG(CG.Pin.pow_adc,CG.频率.POW采样校准次数)
     while True:
-        ret = tools.ADCS_AVG([CG.Pin.pow_adc,CG.Pin.v_adc],CG.频率.POW采样次数)
+        ret = tools.ADCS_AVG([CG.Pin.pow_adc, CG.Pin.v_adc], CG.频率.POW采样次数)
         电流 = ret[0]
-        电流 -= 零飘
+        电流 -= CG.mem.电流零飘
         电流 /= 1000_000  # 单位V
-        电流 /= 100 # 放大倍数
-        电流 /= 0.0003 # 阻值
-        电流  /= 1 # 线性误差
-        CG.mem.功率片电流.append_time(电流)
+        电流 /= 100  # 放大倍数
+        电流 /= 0.0003  # 阻值
+        电流 /= 1  # 线性误差
+        CG.mem.电流.append_time(电流)
         电压 = ret[1]
         电压 *= 33
         电压 /= 1000_000
         CG.mem.输入电压.append_time(电压)
         await asyncio.sleep_ms(CG.频率.POW采样间隔MS)
-        

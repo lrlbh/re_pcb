@@ -25,9 +25,13 @@ def 编码器右(变化量, *args):
 
 def 编码器左(变化量, *args):
     if CG.mem.热压:
-        CG.mem.热压目标压力 += 变化量 * 10
+        CG.mem.热压目标压力 += 变化量 * 100
     else:
         CG.mem.fan_pwm += 变化量 * 6550
+        if CG.mem.fan_pwm < 0:
+            CG.mem.fan_pwm = 0
+        elif CG.mem.fan_pwm > 65535:
+            CG.mem.fan_pwm = 65535
 
 
 # 主循环，保持程序运行

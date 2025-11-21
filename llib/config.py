@@ -1,5 +1,6 @@
 from machine import Pin, ADC, PWM
 from llib import tools
+from lib import pwm
 import time
 import asyncio
 
@@ -13,31 +14,31 @@ class CG:
         # 称重参数
         KG校准次数 = 10_000
         KG采样次数 = 100
-        KG采样间隔MS = 100
+        KG采样间隔MS = 50
 
         # 热电耦参数
         K采样校准次数 = 10_000
         K采样次数 = 100
-        K采样间隔MS = 100
+        K采样间隔MS = 50
 
         # H桥参数
         H桥采样校准次数 = 10_000
         H桥样次数 = 100
-        H桥样间隔MS = 100
+        H桥样间隔MS = 50
 
         # pow参数
         POW采样校准次数 = 10_000
         POW采样次数 = 100
-        POW采样间隔MS = 100
+        POW采样间隔MS = 50
 
         # 风扇参数
-        风扇采样间隔 = 1000
+        风扇采样间隔 = 300
 
-    def m_上():
+    def m_下():
         CG.Pin.m_pwm1.duty_u16(0)
         CG.Pin.m_pwm2.duty_u16(65535)
 
-    def m_下():
+    def m_上():
         CG.Pin.m_pwm1.duty_u16(65535)
         CG.Pin.m_pwm2.duty_u16(0)
 
@@ -49,45 +50,25 @@ class CG:
         pass
 
     class mem:
-        字 = []
-
-        热电耦平均温度 = [0,0]
+        热电耦平均温度 = [0, 0]
         k_零飘 = []
         k_max = []
         k_min = []
         满量程read_uv = 994000
         ntc_temp = 0
 
-        async def adj_热电耦(pga, get_temp):
-            CG.mem.k_零飘 = []
-            CG.mem.k_max = []
-            CG.mem.k_min = []
-            CG.Pin.k_sw.value(1)
-            await asyncio.sleep(0.3)
+        热电耦温度 = tools.环形List(60000, (0, 0, 0, time.ticks_ms()))
 
-            # 遍历 ADC，获取：
-            # 零点
-            # 最高温度
-            # 最低温度
-            for k in CG.Pin.k_adc:
-                零点 = tools.ADC_AVG(k, CG.频率.K采样校准次数)
-                CG.mem.k_零飘.append(零点)
-                CG.mem.k_max.append(get_temp((CG.mem.满量程read_uv - 零点) / pga))
-                CG.mem.k_min.append(get_temp(-零点 / pga))
+        电流 = tools.环形List(60000, (0, time.ticks_ms()))
+        电流零飘 = 0
 
-            CG.Pin.k_sw.value(0)
+        输入电压 = tools.环形List(60000, (0, time.ticks_ms()))
 
-        热电耦温度 = tools.环形List(20000, (0, 0, 0, time.ticks_ms()))
+        电机电流 = tools.环形List(60000, (0, time.ticks_ms()))
 
-        功率片电流 = tools.环形List(20000, (0, time.ticks_ms()))
+        kg = tools.环形List(60000, (0, time.ticks_ms()))
 
-        输入电压 = tools.环形List(20000, (0, time.ticks_ms()))
-
-        电机电流 = tools.环形List(20000, (0, time.ticks_ms()))
-
-        kg = tools.环形List(20000, (0, time.ticks_ms()))
-
-        fan_read = tools.环形List(20000, (0, time.ticks_ms()))
+        fan_read = tools.环形List(60000, (0, time.ticks_ms()))
 
         # 是否进入工作状态
         work = False
@@ -98,14 +79,53 @@ class CG:
 
         热压目标温度 = 120
         热压目标压力 = 500 * 6
-        热压电机关闭电流ma = 40
 
         焊接目标温度 = 0
 
         fan_pwm = 0
 
+        称重零飘 = 0
+
+        电机零飘 = 0
+
     class disk:
         数据超时ms = 500
+        自重克 = 280
+        热压电机关闭电流ma = 144
+        电机保护电流 = 600
+        电机关闭延迟 = 6 
+
+    class adj:
+        async def 热电耦(pga, get_temp):
+            CG.mem.k_零飘 = []
+            CG.mem.k_max = []
+            CG.mem.k_min = []
+            CG.Pin.k_sw.value(1)
+            await asyncio.sleep(0.3)
+
+            # 遍历 ADC，获取：
+            # 零点
+            # 最高温度 
+            # 最低温度
+            for k in CG.Pin.k_adc:
+                零点 = tools.ADC_AVG(k, CG.频率.K采样校准次数)
+                CG.mem.k_零飘.append(零点)
+                CG.mem.k_max.append(get_temp((CG.mem.满量程read_uv - 零点) / pga))
+                CG.mem.k_min.append(get_temp(-零点 / pga))
+
+            CG.Pin.k_sw.value(0)
+
+        def 加热电流():
+            CG.mem.电流零飘 = tools.ADC_AVG(
+                CG.Pin.pow_adc,
+                CG.频率.POW采样校准次数,
+            )
+
+        def 称重():
+            CG.mem.称重零飘 = tools.ADC_AVG(CG.Pin.kg_adc, CG.频率.KG校准次数)
+
+        def 电机():
+            CG.mem.电机零飘 = tools.ADC_AVG(CG.Pin.m_adc, CG.频率.H桥采样校准次数)
 
     class Pin:
         tft_BLK = 10  # 背光
@@ -135,16 +155,16 @@ class CG:
             k_adc.append(ADC(k_i, atten=ADC.ATTN_0DB))
 
         # 加热片
-        pow_pwm = PWM(48, freq=24000, duty_u16=0)
+        pow_pwm = pwm.PWM(48, freq=24000, duty_u16=0)._init(5, 95)
         pow_adc = ADC(2, atten=ADC.ATTN_0DB)
 
         # H桥
-        m_pwm1 = PWM(16, freq=24_000, duty_u16=65535)
-        m_pwm2 = PWM(17, freq=24_000, duty_u16=65535)
+        m_pwm1 = pwm.PWM(16, freq=24_000, duty_u16=65535)._init()
+        m_pwm2 = pwm.PWM(17, freq=24_000, duty_u16=65535)._init()
         m_adc = ADC(1, atten=ADC.ATTN_0DB)
 
         # 风扇pwm
-        fan_pwm = PWM(38, freq=24000, duty_u16=0)
+        fan_pwm = pwm.PWM(38, freq=24000, duty_u16=0)._init()
         fan_fead = 18
 
         # 电压

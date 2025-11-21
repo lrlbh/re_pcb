@@ -58,7 +58,7 @@ def get_mem_str():
     total_mib = total / (1024 * 1024)
 
     # 形如：1.2/7.9MiB  → 正好 10 个字符（前提是 <10MiB）
-    s = "{:.1f}/{:.1f}MiB".format(used_mib, total_mib)
+    s = "{:.1f}/{:.1f}".format(used_mib, total_mib)
 
     # 保证不超过 10 个字符（以后换更大内存板子时也不会溢出）
-    return s[:10]
+    return s

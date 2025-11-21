@@ -75,7 +75,7 @@ async def work():
             break
 
     # 0飘，先简单在开机时校准
-    await CG.mem.adj_热电耦(pga, get_temp)
+    await CG.adj.热电耦(pga, get_temp)
 
     # 重复测试温度
     while True:
