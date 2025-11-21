@@ -29,16 +29,6 @@ async def work():
     if CG.mem.热压:
         压控_open()
 
-    udp.send(
-        f"温度: {CG.mem.热电耦温度.get_new()[0]:.2f}\t"
-        f"kg: {CG.mem.kg.get_new()[0]:.0f}\t"
-        f"加热电流: {CG.mem.电流.get_new()[0]:.2f}\t"
-        f"电机电流: {CG.mem.电机电流.get_new()[0]:.2f}\t"
-        f"目标压力: {CG.mem.热压目标压力}"
-        f"目标温度: {CG.mem.热压目标温度}"
-        # f"加热PWM: {pwm}"
-    )
-
 
 async def no_work():
     CG.Pin.pow_pwm.duty_u16(0)
@@ -52,7 +42,7 @@ async def no_work():
             await asyncio.sleep(1)
         while 压控_close():
             await asyncio.sleep_ms(100)
- 
+
 
 def 压控_open():
     if CG.mem.热压目标压力 >= CG.mem.kg.get_new()[0]:
@@ -62,16 +52,6 @@ def 压控_open():
 
 
 def 压控_close():
-    udp.send(
-        f"温度: {CG.mem.热电耦温度.get_new()[0]:.2f}\t"
-        f"kg: {CG.mem.kg.get_new()[0]:.0f}\t"
-        f"加热电流: {CG.mem.电流.get_new()[0]:.2f}\t"
-        f"电机电流: {CG.mem.电机电流.get_new()[0]:.2f}\t"
-        f"风扇转速: {CG.mem.fan_read.get_new()[0]:.2f}\t"
-        f"风扇PWM: {CG.mem.fan_pwm:.2f}\t"
-        f"加热PWM: 0"
-    )
-
     if (  # 电机已经到达目的地
         CG.disk.热压电机关闭电流ma <= CG.mem.电机电流.get_new()[0]
         or CG.mem.电机电流.get_new()[0] <= 20  # 已经到达过目的地了
@@ -84,10 +64,17 @@ def 压控_close():
 
 
 def 温控():
-    pwm = (CG.mem.热压目标温度 - CG.mem.热电耦温度.get_new()[0]) * 655
-    pwm = int(pwm)
-    if pwm > 65535:
-        pwm = 65535
-    elif pwm < 0:
-        pwm = 0
+    pwm = (CG.mem.热压目标温度 - CG.mem.热电耦平均温度[0]) * 5
     CG.Pin.pow_pwm.duty_100(pwm)
+
+ 
+# udp.send(
+#     f"温度: {CG.mem.热电耦温度.get_new()[0]:.2f}\t"
+#     f"kg: {CG.mem.kg.get_new()[0]:.0f}\t"
+#     f"加热电流: {CG.mem.电流.get_new()[0]:.2f}\t"
+#     f"电机电流: {CG.mem.电机电流.get_new()[0]:.2f}\t"
+#     f"风扇转速: {CG.mem.fan_read.get_new()[0]:.2f}\t"
+#     f"风扇PWM: {CG.mem.fan_pwm:.2f}\t"
+#     f"加热PWM: 0"
+# )
+  

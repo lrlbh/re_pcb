@@ -1,7 +1,7 @@
 import time
 from lib import st7796便宜, udp, lcd
 from llib import tools
-from llib.config import CG
+from llib.config import CG, temp_data
 from machine import SPI, Pin
 import asyncio
 import io
@@ -37,29 +37,7 @@ async def run():
 
 
 async def work():
-    spi = SPI(
-        1,
-        baudrate=100_000_000,
-        polarity=0,
-        phase=0,
-        sck=CG.Pin.tft_SCK,
-        mosi=CG.Pin.tft_SDA,
-        miso=CG.Pin.tft_SDO,
-    )
-
-    # st = st7796便宜.ST7796_便宜(
-    st = st7796便宜.ST7796_便宜(
-        spi=spi,
-        dc=CG.Pin.tft_DC,
-        size=lcd.LCD.Size.st7796,
-        bl=CG.Pin.tft_BLK,
-        rst=CG.Pin.tft_RESET,
-        cs=CG.Pin.tft_CS,
-        旋转=1,
-        color_bit=24,
-        像素缺失=(0, 0, 0, 0),
-        逆CS=False,
-    )
+    st = temp_data.st
     await st._init_async()
     st.def_字符.all += "温度电压流功率校准前后压力风扇转速当前目标热电耦状态热转印热压中焊接加热台℃口范围零飘冷端≈上下限毫伏微最高低自重补偿机保护关断延迟"
     st.load_bmf("/no_delete/字库.bmf", {16: st.def_字符.all, 32: st.def_字符.all})
@@ -77,7 +55,7 @@ async def work():
     txt6 = st.new_txt("零飘(mV):111,222,333", 16, 背景色=st.color.浅灰)
     txt7 = st.new_txt("最低温度:111,222,333", 16, 背景色=st.color.浅灰)
     txt8 = st.new_txt("最高温度:111,222,333", 16, 背景色=st.color.浅灰)
-    txt9 = st.new_txt("POW:99.9A-->12%", 32, 背景色=st.color.深灰)
+    txt9 = st.new_txt("POW:99.9A->999%", 32, 背景色=st.color.深灰)
     txt11 = st.new_txt("零飘:999mV", 16, 背景色=st.color.深灰)
     txt12 = st.new_txt("电压:24.4V", 16, 背景色=st.color.深灰)
     txt13 = st.new_txt("压力:9.9/9.9KG", 32, 背景色=st.color.浅灰)
@@ -86,7 +64,12 @@ async def work():
     txt16 = st.new_txt("电机:9999mA", 32, 背景色=st.color.深灰)
     txt17 = st.new_txt("零飘:999关断:999mA", 16, 背景色=st.color.深灰)
     txt18 = st.new_txt("延迟: 6s保护:999mA", 16, 背景色=st.color.深灰)
-    txt19 = st.new_txt("风扇转速:2222 -->12%", 32, 背景色=st.color.浅灰)
+    txt19 = st.new_txt("风扇转速:2222 ->999%", 32, 背景色=st.color.浅灰)
+    st.new_txt(" " * 20, 32, 背景色=st.color.深灰)
+    _ = st.new_txt("电流:0~30 ", 32, 字体色=st.color.红, 背景色=st.color.浅灰)
+    _ = st.new_txt("电压:18~26", 32, 字体色=st.color.蓝,背景色=st.color.浅灰)
+    _ = st.new_txt("PWM:0~100 ", 32, 字体色=st.color.黑,背景色=st.color.浅灰)
+    _ = st.new_txt("温度:0~300", 32, 字体色=st.color.绿,背景色=st.color.浅灰)
 
     while True:
         s = time.ticks_ms()
@@ -142,7 +125,7 @@ async def work():
 
         # 加热电流
         data = list(CG.mem.电流.get_new())
-        data[0] = "{:4.1f}A-->{:2}%".format(data[0], CG.Pin.pow_pwm.duty_100())
+        data[0] = "{:4.1f}A >{:3}%".format(data[0], CG.Pin.pow_pwm.duty_100())
         txt9.up_data_time(data, 4)
 
         # 加热电流零飘
@@ -175,9 +158,10 @@ async def work():
 
         # 风扇
         data = list(CG.mem.fan_read.get_new())
-        data[0] = "{:4.0f} -> {:02.0f}%".format(data[0],CG.Pin.fan_pwm.duty_100())
+        data[0] = "{:4.0f}-->{:3.0f}%".format(data[0], CG.Pin.fan_pwm.duty_100())
         txt19.up_data_time(data, 5)
+
+        temp_data.st波形.更新()
 
         # udp.send(time.ticks_ms() - s)
         await asyncio.sleep_ms(200)
-                  

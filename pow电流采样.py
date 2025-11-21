@@ -18,7 +18,7 @@
 
 from lib import udp
 import asyncio
-from llib.config import CG
+from llib.config import CG, temp_data
 from llib import tools
 
 
@@ -36,4 +36,14 @@ async def run():
         电压 *= 33
         电压 /= 1000_000
         CG.mem.输入电压.append_time(电压)
+        
+        temp_data.st波形.append_data(
+            [
+                电压,
+                CG.Pin.pow_pwm.duty_100(),
+                CG.mem.热电耦平均温度[0],
+                电流,
+            ]
+        )
+
         await asyncio.sleep_ms(CG.频率.POW采样间隔MS)

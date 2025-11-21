@@ -1,6 +1,6 @@
-from machine import Pin, ADC, PWM
+from machine import Pin, ADC, SPI
 from llib import tools
-from lib import pwm
+from lib import pwm, st7796便宜, lcd
 import time
 import asyncio
 
@@ -14,22 +14,22 @@ class CG:
         # 称重参数
         KG校准次数 = 10_000
         KG采样次数 = 100
-        KG采样间隔MS = 50
+        KG采样间隔MS = 24
 
         # 热电耦参数
         K采样校准次数 = 10_000
         K采样次数 = 100
-        K采样间隔MS = 50
+        K采样间隔MS = 24
 
         # H桥参数
         H桥采样校准次数 = 10_000
         H桥样次数 = 100
-        H桥样间隔MS = 50
+        H桥样间隔MS = 24
 
         # pow参数
         POW采样校准次数 = 10_000
         POW采样次数 = 100
-        POW采样间隔MS = 50
+        POW采样间隔MS = 24
 
         # 风扇参数
         风扇采样间隔 = 300
@@ -93,7 +93,7 @@ class CG:
         自重克 = 280
         热压电机关闭电流ma = 144
         电机保护电流 = 600
-        电机关闭延迟 = 6 
+        电机关闭延迟 = 6
 
     class adj:
         async def 热电耦(pga, get_temp):
@@ -105,7 +105,7 @@ class CG:
 
             # 遍历 ADC，获取：
             # 零点
-            # 最高温度 
+            # 最高温度
             # 最低温度
             for k in CG.Pin.k_adc:
                 零点 = tools.ADC_AVG(k, CG.频率.K采样校准次数)
@@ -169,3 +169,48 @@ class CG:
 
         # 电压
         v_adc = ADC(9, atten=ADC.ATTN_0DB)
+
+
+class temp_data:
+    spi = SPI(
+        1,
+        baudrate=100_000_000,
+        polarity=0,
+        phase=0,
+        sck=CG.Pin.tft_SCK,
+        mosi=CG.Pin.tft_SDA,
+        miso=CG.Pin.tft_SDO,
+    )
+
+    # st = st7796便宜.ST7796_便宜(
+    st = st7796便宜.ST7796_便宜(
+        spi=spi,
+        dc=CG.Pin.tft_DC,
+        size=lcd.LCD.Size.st7796,
+        bl=CG.Pin.tft_BLK,
+        rst=CG.Pin.tft_RESET,
+        cs=CG.Pin.tft_CS,
+        旋转=1,
+        color_bit=24,
+        像素缺失=(0, 0, 0, 0),
+        逆CS=False,
+    )
+
+    st波形 = st.new_波形(
+        w起点=0,  
+        h起点=320,  # 波形区域左上角 Y
+        size_w=320,  
+        size_h=160,  
+        多少格=998,
+        # 通道顺序：电压, PWM, 温度, 电流
+        波形像素=[10, 10, 10, 10],  # 缩放/像素相关：电压, PWM, 温度, 电流
+        data_min=[18, 0, 0, 0],  # 最小值：电压 18，其它 0
+        data_max=[26, 100, 300, 30],  # 最大值：电压 26V, PWM 100%, 温度 300℃, 电流 30A
+        波形色=[
+            st.color_fn(0, 0, 255),  # 电压 → 蓝
+            st.color_fn(0, 0, 0),  # PWM  → 黑
+            st.color_fn(0, 255, 0),  # 温度 → 绿
+            st.color_fn(255, 0, 0),  # 电流 → 红
+        ],
+        背景色=st.color_fn(255, 255, 255),
+    )

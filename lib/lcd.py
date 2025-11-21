@@ -2,7 +2,7 @@ import asyncio
 import time
 from machine import Pin, SPI
 
-from lib import udp
+# from lib import udp
 
 
 class LCD:
@@ -1431,20 +1431,8 @@ class LCD:
                         idx += 点阵长度
 
     def _load_bmf_select(self, path, 需要的字符):
-        s = time.ticks_ms()
+        # s = time.ticks_ms()
 
-        def _find_u32_le_aligned(buf, code, idx_start, idx_end):
-            """
-            在 buf[idx_start:idx_end] 里查找 小端 uint32 = code，
-            只接受 4 字节对齐的位置（相对于 idx_start）。
-            找到返回 buf 的绝对下标，找不到返回 -1。
-            """
-            pattern = code.to_bytes(4, "little")
-            idx = buf.find(pattern, idx_start, idx_end)
-            # 只要命中了，但不是 4 字节对齐，就从下一个字节继续找
-            while idx != -1 and ((idx - idx_start) & 3):
-                idx = buf.find(pattern, idx + 1, idx_end)
-            return idx
 
         # —— 读取固定上限（保留原 buf）——
         size = 1024 * 50
@@ -1535,7 +1523,7 @@ class LCD:
                         # if 字号 == 32:
                         #     udp.send(点阵长度)
                         LCD._char[字号][字符] = f.read(点阵长度)
-        udp.send(time.ticks_ms() - s)
+        # udp.send(time.ticks_ms() - s)
 
     # 参数格式
     # {16:"sada",32:"asdas"}
@@ -1661,7 +1649,7 @@ class 字符区域:
             raise ValueError(f"超出显示区域->高({h})")
 
         # 下次坐标
-        udp.send(f"{w, h}")
+        # udp.send(f"{w, h}")
         if w >= st._width and h >= self._st._max_h:
             st._wh = (0, h)
         elif w >= st._width:
