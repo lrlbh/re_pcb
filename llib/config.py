@@ -1,105 +1,86 @@
 from machine import Pin, ADC, SPI
 from llib import tools
-from lib import pwm, st7796便宜, lcd
+from lib import pwm, lcd, disk_config
 import time
 import asyncio
 
 
-class CG:
-    class 频率:
-        # 编码器参数
-        BMQ轮询间隔MS = 50
-        BMQ抖动等待MS = 10
+class CG(disk_config.DiskConfig):
+    class H桥:
+        _校准次数 = 10_000
+        _采样次数 = 100
+        _采样间隔MS = 24
+        _关闭电流MA = 104
+        _保护电流MA = 600
+        _关闭延迟S = 5
 
-        # 称重参数
-        KG校准次数 = 10_000
-        KG采样次数 = 100
-        KG采样间隔MS = 24
+        零飘 = 0
+        电流 = tools.环形List(60000, (0, time.ticks_ms()))
 
+        @staticmethod
+        def down():
+            CG.Pin.m_pwm1.duty_u16(0)
+            CG.Pin.m_pwm2.duty_u16(65535)
+
+        @staticmethod
+        def up():
+            CG.Pin.m_pwm1.duty_u16(65535)
+            CG.Pin.m_pwm2.duty_u16(0)
+
+        @staticmethod
+        def close():
+            CG.Pin.m_pwm1.duty_u16(65535)
+            CG.Pin.m_pwm2.duty_u16(65535)
+
+        @staticmethod
+        def adj():
+            CG.H桥.零飘 = tools.ADC_AVG(CG.Pin.m_adc, CG.H桥._校准次数)
+
+    class BMQ:
+        _轮询间隔MS = 50
+        _抖动等待MS = 10
+
+    class KG:
+        _校准次数 = 10_000
+        _采样次数 = 100
+        _采样间隔MS = 24
+        _自重克 = 280
+        kg = tools.环形List(60000, (0, time.ticks_ms()))
+        称重零飘 = 0
+
+        @staticmethod
+        def adj():
+            CG.KG.称重零飘 = tools.ADC_AVG(CG.Pin.kg_adc, CG.KG._校准次数)
+
+    class TEMP:
         # 热电耦参数
-        K采样校准次数 = 10_000
-        K采样次数 = 100
-        K采样间隔MS = 24
-
-        # H桥参数
-        H桥采样校准次数 = 10_000
-        H桥样次数 = 100
-        H桥样间隔MS = 24
-
-        # pow参数
-        POW采样校准次数 = 10_000
-        POW采样次数 = 100
-        POW采样间隔MS = 24
-
-        # 风扇参数
-        风扇采样间隔 = 300
-
-    def m_下():
-        CG.Pin.m_pwm1.duty_u16(0)
-        CG.Pin.m_pwm2.duty_u16(65535)
-
-    def m_上():
-        CG.Pin.m_pwm1.duty_u16(65535)
-        CG.Pin.m_pwm2.duty_u16(0)
-
-    def m_close():
-        CG.Pin.m_pwm1.duty_u16(65535)
-        CG.Pin.m_pwm2.duty_u16(65535)
-
-    class K:
-        pass
-
-    class mem:
+        _校准次数 = 10_000
+        _采样次数 = 100
+        _采样间隔MS = 24
+        
+        
         热电耦平均温度 = [0, 0]
         k_零飘 = []
         k_max = []
         k_min = []
         满量程read_uv = 994000
         ntc_temp = 0
-
         热电耦温度 = tools.环形List(60000, (0, 0, 0, time.ticks_ms()))
 
-        电流 = tools.环形List(60000, (0, time.ticks_ms()))
-        电流零飘 = 0
-
-        输入电压 = tools.环形List(60000, (0, time.ticks_ms()))
-
-        电机电流 = tools.环形List(60000, (0, time.ticks_ms()))
-
-        kg = tools.环形List(60000, (0, time.ticks_ms()))
-
-        fan_read = tools.环形List(60000, (0, time.ticks_ms()))
-
-        # 是否进入工作状态
-        work = False
-
-        热压 = False
-
-        热压退出 = False
-
-        热压目标温度 = 120
-        热压目标压力 = 500 * 6
-
-        焊接目标温度 = 0
-
-        fan_pwm = 0
-
-        称重零飘 = 0
-
-        电机零飘 = 0
-
-    class disk:
-        数据超时ms = 500
-        自重克 = 280
-        热压电机关闭电流ma = 144
-        电机保护电流 = 600
-        电机关闭延迟 = 6
-
-    class adj:
-        async def 热电耦(pga, get_temp):
-            CG.mem.k_零飘 = []
-            CG.mem.k_max = []
-            CG.mem.k_min = []
+        # 短路校准
+        # -----------------
+        # 热电耦合测量的是冷端和探头的温差
+        # 为了避免校准时，冷热端温度不一样，可以短路冷端输入信号
+        # 然后在校准运放0飘
+        # -----------------
+        # 当然这也会引入两个问题
+        # 1、共模电压改变，不过共模电压主要来自K_REF,影响很小
+        # 2、MOS内阻，这是主要问题，可以选择低VGSth，低内阻MOS
+        @staticmethod
+        async def adj(pga, get_temp):
+            CG.TEMP.k_零飘 = []
+            CG.TEMP.k_max = []
+            CG.TEMP.k_min = []
             CG.Pin.k_sw.value(1)
             await asyncio.sleep(0.3)
 
@@ -108,24 +89,45 @@ class CG:
             # 最高温度
             # 最低温度
             for k in CG.Pin.k_adc:
-                零点 = tools.ADC_AVG(k, CG.频率.K采样校准次数)
-                CG.mem.k_零飘.append(零点)
-                CG.mem.k_max.append(get_temp((CG.mem.满量程read_uv - 零点) / pga))
-                CG.mem.k_min.append(get_temp(-零点 / pga))
+                零点 = tools.ADC_AVG(k, CG.TEMP._校准次数)
+                CG.TEMP.k_零飘.append(零点)
+                CG.TEMP.k_max.append(get_temp((CG.TEMP.满量程read_uv - 零点) / pga))
+                CG.TEMP.k_min.append(get_temp(-零点 / pga))
 
             CG.Pin.k_sw.value(0)
 
-        def 加热电流():
-            CG.mem.电流零飘 = tools.ADC_AVG(
+    class POW:
+        # pow参数
+        _校准次数 = 10_000
+        _采样次数 = 100
+        _采样间隔MS = 24
+        
+        
+        电流 = tools.环形List(60000, (0, time.ticks_ms()))
+        电流零飘 = 0
+        输入电压 = tools.环形List(60000, (0, time.ticks_ms()))
+
+        @staticmethod
+        def adj():
+            CG.POW.电流零飘 = tools.ADC_AVG(
                 CG.Pin.pow_adc,
-                CG.频率.POW采样校准次数,
+                CG.POW._校准次数,
             )
 
-        def 称重():
-            CG.mem.称重零飘 = tools.ADC_AVG(CG.Pin.kg_adc, CG.频率.KG校准次数)
+    class FAN:
+        # 风扇参数
+        _采样间隔MS = 300
+        fan_read = tools.环形List(60000, (0, time.ticks_ms()))
 
-        def 电机():
-            CG.mem.电机零飘 = tools.ADC_AVG(CG.Pin.m_adc, CG.频率.H桥采样校准次数)
+    class WORK:
+        # WORK
+        work = False
+        热压 = False
+        热压退出 = False
+        _目标温度 = 200
+        _目标压力 = 500 * 6
+        _焊接目标温度 = 200
+        _fan_pwm = 0
 
     class Pin:
         tft_BLK = 10  # 背光
@@ -170,47 +172,12 @@ class CG:
         # 电压
         v_adc = ADC(9, atten=ADC.ATTN_0DB)
 
+    class UI:
+        # UI
+        _数据超时MS = 500
 
-class temp_data:
-    spi = SPI(
-        1,
-        baudrate=100_000_000,
-        polarity=0,
-        phase=0,
-        sck=CG.Pin.tft_SCK,
-        mosi=CG.Pin.tft_SDA,
-        miso=CG.Pin.tft_SDO,
-    )
+        spi: SPI
 
-    # st = st7796便宜.ST7796_便宜(
-    st = st7796便宜.ST7796_便宜(
-        spi=spi,
-        dc=CG.Pin.tft_DC,
-        size=lcd.LCD.Size.st7796,
-        bl=CG.Pin.tft_BLK,
-        rst=CG.Pin.tft_RESET,
-        cs=CG.Pin.tft_CS,
-        旋转=1,
-        color_bit=24,
-        像素缺失=(0, 0, 0, 0),
-        逆CS=False,
-    )
+        st: lcd.LCD
 
-    st波形 = st.new_波形(
-        w起点=0,  
-        h起点=320,  # 波形区域左上角 Y
-        size_w=320,  
-        size_h=160,  
-        多少格=998,
-        # 通道顺序：电压, PWM, 温度, 电流
-        波形像素=[10, 10, 10, 10],  # 缩放/像素相关：电压, PWM, 温度, 电流
-        data_min=[18, 0, 0, 0],  # 最小值：电压 18，其它 0
-        data_max=[26, 100, 300, 30],  # 最大值：电压 26V, PWM 100%, 温度 300℃, 电流 30A
-        波形色=[
-            st.color_fn(0, 0, 255),  # 电压 → 蓝
-            st.color_fn(0, 0, 0),  # PWM  → 黑
-            st.color_fn(0, 255, 0),  # 温度 → 绿
-            st.color_fn(255, 0, 0),  # 电流 → 红
-        ],
-        背景色=st.color_fn(255, 255, 255),
-    )
+        st波形: lcd.波形

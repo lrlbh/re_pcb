@@ -18,32 +18,34 @@
 
 from lib import udp
 import asyncio
-from llib.config import CG, temp_data
+from llib.config import CG
 from llib import tools
 
 
 async def run():
+    CG.POW.adj()
+    await asyncio.sleep(3)
     while True:
-        ret = tools.ADCS_AVG([CG.Pin.pow_adc, CG.Pin.v_adc], CG.频率.POW采样次数)
+        ret = tools.ADCS_AVG([CG.Pin.pow_adc, CG.Pin.v_adc], CG.POW._采样次数)
         电流 = ret[0]
-        电流 -= CG.mem.电流零飘
+        电流 -= CG.POW.电流零飘
         电流 /= 1000_000  # 单位V
         电流 /= 100  # 放大倍数
         电流 /= 0.0003  # 阻值
         电流 /= 1  # 线性误差
-        CG.mem.电流.append_time(电流)
+        CG.POW.电流.append_time(电流)
         电压 = ret[1]
         电压 *= 33
         电压 /= 1000_000
-        CG.mem.输入电压.append_time(电压)
+        CG.POW.输入电压.append_time(电压)
         
-        temp_data.st波形.append_data(
+        CG.UI.st波形.append_data(
             [
                 电压,
                 CG.Pin.pow_pwm.duty_100(),
-                CG.mem.热电耦平均温度[0],
+                CG.TEMP.热电耦平均温度[0],
                 电流,
             ]
         )
 
-        await asyncio.sleep_ms(CG.频率.POW采样间隔MS)
+        await asyncio.sleep_ms(CG.POW._采样间隔MS)

@@ -23,37 +23,6 @@ import sys
 import io
 
 
-# 短路校准
-# -----------------
-# 热电耦合测量的是冷端和探头的温差
-# 为了避免校准时，冷热端温度不一样，可以短路冷端输入信号
-# 然后在校准运放0飘
-# -----------------
-# 当然这也会引入两个问题
-# 1、共模电压改变，不过共模电压主要来自K_REF,影响很小
-# 2、MOS内阻，这是主要问题，可以选择低VGSth，低内阻MOS
-async def 短路校准(满量程电压):
-    K_零点 = []
-    max_temp = []
-    min_temp = []
-    CG.Pin.k_sw.value(1)
-    await asyncio.sleep(0.3)
-
-    # 遍历 ADC，获取：
-    # 零点
-    # 最高温度
-    # 最低温度
-    for k in CG.Pin.k_adc:
-        零点 = tools.ADC_AVG(k, CG.频率.K采样校准次数)
-        K_零点.append(零点)
-        max_temp.append(get_temp(满量程电压 - 零点))
-        min_temp.append(get_temp(零点))
-
-    CG.Pin.k_sw.value(0)
-
-    return K_零点, max_temp, min_temp
-
-
 async def work():
     # 放大倍数
     pga = 80
@@ -70,12 +39,12 @@ async def work():
             t_16.append(k.read_u16())
             t_uv.append(k.read_uv())
         if max(t_16) == 65535:
-            CG.mem.满量程read_uv = max(t_uv)
-            udp.send(f"标定成功：满量程输出{CG.mem.满量程read_uv}")
+            CG.TEMP.满量程read_uv = max(t_uv)
+            udp.send(f"标定成功：满量程输出{CG.TEMP.满量程read_uv}")
             break
 
     # 0飘，先简单在开机时校准
-    await CG.adj.热电耦(pga, get_temp)
+    await CG.TEMP.adj(pga, get_temp)
 
     # 重复测试温度
     while True:
@@ -83,38 +52,38 @@ async def work():
         # 这一坨输出没有冷端补偿的温度
         temp_3 = []
         for index, k in enumerate(CG.Pin.k_adc):
-            原始读数 = tools.ADC_AVG(k, CG.频率.K采样次数)
-            校准零飘后 = 原始读数 - CG.mem.k_零飘[index]
+            原始读数 = tools.ADC_AVG(k, CG.TEMP._采样次数)
+            校准零飘后 = 原始读数 - CG.TEMP.k_零飘[index]
             pga后 = 校准零飘后 / pga
             temp_3.append(get_temp(pga后))
 
         # 抛弃断线，然后计算平均值
         n = 0
-        CG.mem.热电耦平均温度[0] = 0
+        CG.TEMP.热电耦平均温度[0] = 0
         for i, temp_i in enumerate(temp_3):
             # 断线
             # 可以轻松几度
-            if temp_i == CG.mem.k_max[i]:
+            if temp_i == CG.TEMP.k_max[i]:
                 continue
-            CG.mem.热电耦平均温度[0] += temp_i
-            n += 1
+            CG.TEMP.热电耦平均温度[0] += temp_i
+            n += 1 
         if n > 0:
-            CG.mem.热电耦平均温度[0] /= n
+            CG.TEMP.热电耦平均温度[0] /= n
         else:
-            CG.mem.热电耦平均温度[0] = 920
+            CG.TEMP.热电耦平均温度[0] = 920
 
         # ntc温度
-        CG.mem.ntc_temp = temp.read(100)
+        CG.TEMP.ntc_temp = temp.read(100)
         for i in range(len(temp_3)):
-            temp_3[i] += CG.mem.ntc_temp
-        CG.mem.热电耦平均温度[0] += CG.mem.ntc_temp
-        CG.mem.热电耦平均温度[1] = time.ticks_ms()
+            temp_3[i] += CG.TEMP.ntc_temp
+        CG.TEMP.热电耦平均温度[0] += CG.TEMP.ntc_temp
+        CG.TEMP.热电耦平均温度[1] = time.ticks_ms()
 
         # 存入环形内存
         temp_3.append(time.ticks_ms())
-        CG.mem.热电耦温度.append(tuple(temp_3))
+        CG.TEMP.热电耦温度.append(tuple(temp_3))
 
-        await asyncio.sleep_ms(CG.频率.K采样间隔MS)
+        await asyncio.sleep_ms(CG.TEMP._采样间隔MS)
 
 
 async def run():

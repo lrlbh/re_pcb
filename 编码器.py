@@ -6,32 +6,33 @@ from lib import udp
 
 
 def 右按钮任务():
-    CG.mem.work = not CG.mem.work
-    if CG.mem.热压:
-        CG.mem.热压退出 = True
+    CG.WORK.work = not CG.WORK.work
+    if CG.WORK.热压:
+        CG.WORK.热压退出 = True
 
 
 def 左按钮任务():
-    if CG.mem.work:
+    if CG.WORK.work:
         return
-    CG.mem.热压 = not CG.mem.热压
-
-    udp.send("右按下")
+    CG.WORK.热压 = not CG.WORK.热压
 
 
 def 编码器右(变化量, *args):
-    CG.mem.热压目标温度 += 变化量
+    if CG.WORK.热压:
+        CG.WORK._目标温度 += 变化量
+    else:
+        CG.WORK._焊接目标温度 += 变化量
 
 
 def 编码器左(变化量, *args):
-    if CG.mem.热压:
-        CG.mem.热压目标压力 += 变化量 * 100
+    if CG.WORK.热压:
+        CG.WORK._目标压力 += 变化量 * 100
     else:
-        CG.mem.fan_pwm += 变化量 * 6550
-        if CG.mem.fan_pwm < 0:
-            CG.mem.fan_pwm = 0
-        elif CG.mem.fan_pwm > 65535:
-            CG.mem.fan_pwm = 65535
+        CG.WORK._fan_pwm += 变化量 * 6550
+        if CG.WORK._fan_pwm < 0:
+            CG.WORK._fan_pwm = 0
+        elif CG.WORK._fan_pwm > 65535:
+            CG.WORK._fan_pwm = 65535
 
 
 # 主循环，保持程序运行
@@ -59,16 +60,16 @@ async def run():
     while True:
         if not CG.Pin.左SW.value():
             while True:
-                await asyncio.sleep_ms(CG.频率.BMQ抖动等待MS)
+                await asyncio.sleep_ms(CG.BMQ._抖动等待MS)
                 if CG.Pin.左SW.value():
                     break
             左按钮任务()
 
         if not CG.Pin.右SW.value():
             while True:
-                await asyncio.sleep_ms(CG.频率.BMQ抖动等待MS)
+                await asyncio.sleep_ms(CG.BMQ._抖动等待MS)
                 if CG.Pin.右SW.value():
                     break
             右按钮任务()
 
-        await asyncio.sleep_ms(CG.频率.BMQ轮询间隔MS)
+        await asyncio.sleep_ms(CG.BMQ._抖动等待MS)

@@ -1,5 +1,6 @@
 import os
 from lib import udp
+os.rmdir("/no_delete/config.json")
 
 def delete_all_except():
     keep_files = {'boot.py'}
