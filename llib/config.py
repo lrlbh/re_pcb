@@ -5,17 +5,23 @@ import time
 import asyncio
 
 
+class 方便修改:
+    校准次数 = 10_000
+    平均次数 = 100
+    采样间隔MS = 24
+
+
 class CG(disk_config.DiskConfig):
     class H桥:
-        _校准次数 = 10_000
-        _采样次数 = 100
-        _采样间隔MS = 24
+        _校准次数 = 方便修改.校准次数
+        _采样次数 = 方便修改.平均次数
+        _采样间隔MS = 方便修改.采样间隔MS
         _关闭电流MA = 104
         _保护电流MA = 600
         _关闭延迟S = 5
 
         零飘 = 0
-        电流 = tools.环形List(60000, (0, time.ticks_ms()))
+        电流 = tools.环形List(10000, (0, time.ticks_ms()))
 
         @staticmethod
         def down():
@@ -41,11 +47,18 @@ class CG(disk_config.DiskConfig):
         _抖动等待MS = 10
 
     class KG:
-        _校准次数 = 10_000
-        _采样次数 = 100
-        _采样间隔MS = 24
+        _校准次数 = 方便修改.校准次数
+        _采样次数 = 方便修改.平均次数
+        _采样间隔MS = 方便修改.采样间隔MS
         _自重克 = 280
-        kg = tools.环形List(60000, (0, time.ticks_ms()))
+        _PGA = 101
+        _传感器量程_g = 500 * 20  # 10KG
+        _激励电压mv = 3300
+
+        # 灵敏度uv(满量程输出) / 量程克(10KG=20斤) * 放大倍数
+        # 传感器描述里面误差基本来自这里，这里可以使用校准后的参数
+        每克电压uv = _激励电压mv / _传感器量程_g * _PGA
+        kg = tools.环形List(10000, (0, time.ticks_ms()))
         称重零飘 = 0
 
         @staticmethod
@@ -54,18 +67,20 @@ class CG(disk_config.DiskConfig):
 
     class TEMP:
         # 热电耦参数
-        _校准次数 = 10_000
-        _采样次数 = 100
-        _采样间隔MS = 24
-        
-        
+        _校准次数 = 方便修改.校准次数
+        _采样次数 = 方便修改.平均次数
+        _采样间隔MS = 方便修改.采样间隔MS
+        _PGA = 80
+        _R1阻值 = 430_000
+        _输入电压uv = 3_300_000
+
         热电耦平均温度 = [0, 0]
         k_零飘 = []
         k_max = []
         k_min = []
         满量程read_uv = 994000
         ntc_temp = 0
-        热电耦温度 = tools.环形List(60000, (0, 0, 0, time.ticks_ms()))
+        热电耦温度 = tools.环形List(10000, (0, 0, 0, time.ticks_ms()))
 
         # 短路校准
         # -----------------
@@ -92,20 +107,20 @@ class CG(disk_config.DiskConfig):
                 零点 = tools.ADC_AVG(k, CG.TEMP._校准次数)
                 CG.TEMP.k_零飘.append(零点)
                 CG.TEMP.k_max.append(get_temp((CG.TEMP.满量程read_uv - 零点) / pga))
+                # CG.TEMP.k_min.append(get_temp((0 - 零点) / pga))
                 CG.TEMP.k_min.append(get_temp(-零点 / pga))
 
             CG.Pin.k_sw.value(0)
 
     class POW:
         # pow参数
-        _校准次数 = 10_000
-        _采样次数 = 100
-        _采样间隔MS = 24
-        
-        
-        电流 = tools.环形List(60000, (0, time.ticks_ms()))
+        _校准次数 = 方便修改.校准次数
+        _采样次数 = 方便修改.平均次数
+        _采样间隔MS = 方便修改.采样间隔MS
+
+        电流 = tools.环形List(10000, (0, time.ticks_ms()))
         电流零飘 = 0
-        输入电压 = tools.环形List(60000, (0, time.ticks_ms()))
+        输入电压 = tools.环形List(10000, (0, time.ticks_ms()))
 
         @staticmethod
         def adj():
@@ -117,7 +132,7 @@ class CG(disk_config.DiskConfig):
     class FAN:
         # 风扇参数
         _采样间隔MS = 300
-        fan_read = tools.环形List(60000, (0, time.ticks_ms()))
+        fan_read = tools.环形List(10000, (0, time.ticks_ms()))
 
     class WORK:
         # WORK

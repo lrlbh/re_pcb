@@ -1,27 +1,13 @@
 import time
-from lib import st7796便宜, udp, lcd
+from lib import st7796便宜, lcd
 from llib import tools
 from llib.config import CG
-from machine import SPI, Pin
+from machine import SPI
 import asyncio
-import io
-import sys
 
 
-
+@tools.catch_and_report("显示屏任务")
 async def run():
-    try:
-        await work()
-    except Exception as e:
-        # 捕获完整异常信息（含文件名、行号）
-        buf = io.StringIO()
-        sys.print_exception(e, buf)
-        text = buf.getvalue()
-        udp.send("=== 异常捕获 ===")
-        udp.send(text)
-
-
-async def work():
     CG.UI.spi = SPI(
         1,
         baudrate=100_000_000,
@@ -102,8 +88,10 @@ async def work():
     _ = st.new_txt("PWM:0~100 ", 32, 字体色=st.color.黑, 背景色=st.color.浅灰)
     _ = st.new_txt("温度:0~300", 32, 字体色=st.color.绿, 背景色=st.color.浅灰)
 
+    # i = 0
     while True:
-        s = time.ticks_ms()
+        # i+=1
+        # s = time.ticks_ms()
         # 是否在工作，工作在什么模式
         if CG.WORK.work:
             字体色 = st.color.黄
@@ -115,8 +103,9 @@ async def work():
             txt1.up_data("焊接", 3, 字体色=字体色)
 
         # 剩余内存，比较耗时
+        # if i == 10:
         txt1.up_data(tools.get_mem_str(), 6)
-
+        # i = 0
         # 平均温度
         if (
             time.ticks_diff(time.ticks_ms(), CG.TEMP.热电耦平均温度[1])

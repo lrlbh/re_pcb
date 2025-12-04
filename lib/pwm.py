@@ -9,7 +9,7 @@ class PWM(machine.PWM):
 
     def duty_100(self, n=None):
         if n is None:
-            return round(self.duty_u16() / 655.35)
+            return self.duty_u16() / 655.35
 
         n *= 655.35
         n = round(n)

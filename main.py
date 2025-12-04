@@ -34,9 +34,9 @@ async def main():
         "热压": uasyncio.create_task(热压.run()),
         "风扇": uasyncio.create_task(风扇.run()),
         "编码器任务": uasyncio.create_task(编码器.run()),
-        # "配置文件任务": uasyncio.create_task(
-        #     CG.auto_save_async("/no_delete/config.json", 1)
-        # ),
+        "配置文件任务": uasyncio.create_task(
+            CG.auto_save_async("/no_delete/config.json", 1)
+        ),
     }
 
     # 如果没有意外定时喂狗

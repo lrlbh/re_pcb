@@ -1,7 +1,8 @@
 import asyncio
-from lib import Fan
+from lib import Fan,tools
 from llib.config import CG
 
+@tools.catch_and_report("风扇采样任务")
 async def run():
 
     zs = Fan.Fan(CG.Pin.fan_fead)

@@ -1,27 +1,17 @@
 from llib import tools
 from llib.config import CG
 import asyncio
-from lib import udp
-import sys
-import io
 
 
+@tools.catch_and_report("热压任务")
 async def run():
-    try:
-        while True:
-            if CG.WORK.work:
-                await work()
-            else:
-                await no_work()
+    while True:
+        if CG.WORK.work:
+            await work()
+        else:
+            await no_work()
 
-            await asyncio.sleep_ms(300)
-    except Exception as e:
-        # 捕获完整异常信息（含文件名、行号）
-        buf = io.StringIO()
-        sys.print_exception(e, buf)
-        text = buf.getvalue()
-        udp.send("=== 异常捕获 ===")
-        udp.send(text)
+        await asyncio.sleep_ms(300)
 
 
 async def work():

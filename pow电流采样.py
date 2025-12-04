@@ -16,12 +16,11 @@
 # ADC.ATTN_11DB
 
 
-from lib import udp
 import asyncio
 from llib.config import CG
 from llib import tools
 
-
+@tools.catch_and_report("POW采样任务")
 async def run():
     CG.POW.adj()
     await asyncio.sleep(3)
@@ -38,7 +37,7 @@ async def run():
         电压 *= 33
         电压 /= 1000_000
         CG.POW.输入电压.append_time(电压)
-        
+         
         CG.UI.st波形.append_data(
             [
                 电压,
@@ -47,5 +46,6 @@ async def run():
                 电流,
             ]
         )
-
+        # udp.send(1)
         await asyncio.sleep_ms(CG.POW._采样间隔MS)
+        # await asyncio.sleep_ms(1)

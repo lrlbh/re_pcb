@@ -1,9 +1,9 @@
 import asyncio
 from llib.config import CG
 from llib import tools
-from lib import udp
 
 
+@tools.catch_and_report("H桥采样任务")
 async def run():
     CG.H桥.adj()
     while True:
