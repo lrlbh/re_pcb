@@ -1,10 +1,10 @@
 import asyncio
 from llib.config import CG
-from llib import tools
+from lib import tools
 
 @tools.catch_and_report("KG采样任务")
 async def run():
-    CG.KG.adj()
+    CG.KG.adj() 
 
     while True:
         # 读取电压

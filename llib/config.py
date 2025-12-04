@@ -1,5 +1,5 @@
 from machine import Pin, ADC, SPI
-from llib import tools
+from lib import tools
 from lib import pwm, lcd, disk_config
 import time
 import asyncio
@@ -82,6 +82,64 @@ class CG(disk_config.DiskConfig):
         ntc_temp = 0
         热电耦温度 = tools.环形List(10000, (0, 0, 0, time.ticks_ms()))
 
+        def get_temp(uv: float) -> float:
+            """
+            把 Type-K 热电偶的电势（μV, cold-junction 已补偿后的总电势）转换成温度 (°C)
+            uv: 电势，单位 microvolts (µV) --- *必须是 µV*
+            返回：温度 (°C)。若超出 NIST 多项式定义域，返回 1_000_000 表示错误。
+            系数来自 NIST / ITS-90 逆多项式（常见实现与文档一致）。
+            """
+            # 有效范围（µV）
+            if uv < -5891.0 or uv > 54886.0:
+                return 1_000_000.0
+
+            # 逆多项式系数（按 NIST/ITS-90，输入 E 单位为 µV，输出为 °C）
+            # 区间  : -200 .. 0 °C   对应电势约 -5891 .. 0 µV
+            if uv < 0.0:
+                c = [
+                    0.000000000000e00,
+                    2.5949192e-02,
+                    -2.1312719e-07,
+                    7.9018692e-10,
+                    4.2527777e-13,
+                    1.3304473e-16,
+                    2.0241446e-20,
+                    1.2668171e-24,
+                    -1.3180580e-29,
+                    0.0000000e00,
+                ]
+            # 区间 : 0 .. 500 °C   对应电势约 0 .. 20644 µV
+            elif uv <= 20644.0:
+                c = [
+                    0.000000000000e00,
+                    2.508355e-02,
+                    7.860106e-08,
+                    -2.503131e-10,
+                    8.315270e-14,
+                    -1.228034e-17,
+                    9.804036e-22,
+                    -4.413030e-26,
+                    1.057734e-30,
+                    -1.052755e-35,
+                ]
+            # 区间 : 500 .. 1372 °C
+            else:
+                c = [
+                    -1.318058e02,
+                    4.830222e-02,
+                    -1.646031e-06,
+                    5.464731e-11,
+                    -9.650715e-16,
+                    8.802193e-21,
+                    -3.110810e-26,
+                ]
+
+            # Horner 求值（从最高次项开始）
+            t = c[-1]
+            for coef in reversed(c[:-1]):
+                t = t * uv + coef
+            return t
+
         # 短路校准
         # -----------------
         # 热电耦合测量的是冷端和探头的温差
@@ -91,8 +149,8 @@ class CG(disk_config.DiskConfig):
         # 当然这也会引入两个问题
         # 1、共模电压改变，不过共模电压主要来自K_REF,影响很小
         # 2、MOS内阻，这是主要问题，可以选择低VGSth，低内阻MOS
-        @staticmethod
-        async def adj(pga, get_temp):
+        @classmethod
+        async def adj(cls):
             CG.TEMP.k_零飘 = []
             CG.TEMP.k_max = []
             CG.TEMP.k_min = []
@@ -106,9 +164,11 @@ class CG(disk_config.DiskConfig):
             for k in CG.Pin.k_adc:
                 零点 = tools.ADC_AVG(k, CG.TEMP._校准次数)
                 CG.TEMP.k_零飘.append(零点)
-                CG.TEMP.k_max.append(get_temp((CG.TEMP.满量程read_uv - 零点) / pga))
+                CG.TEMP.k_max.append(
+                    cls.get_temp((CG.TEMP.满量程read_uv - 零点) / cls._PGA)
+                )
                 # CG.TEMP.k_min.append(get_temp((0 - 零点) / pga))
-                CG.TEMP.k_min.append(get_temp(-零点 / pga))
+                CG.TEMP.k_min.append(cls.get_temp(-零点 / cls._PGA))
 
             CG.Pin.k_sw.value(0)
 
@@ -131,14 +191,17 @@ class CG(disk_config.DiskConfig):
 
     class FAN:
         # 风扇参数
-        _采样间隔MS = 300
+        _采样间隔MS = 12000
         fan_read = tools.环形List(10000, (0, time.ticks_ms()))
 
     class WORK:
         # WORK
         work = False
         热压 = False
+        热压进入 = False
+        焊接进入 = False
         热压退出 = False
+
         _目标温度 = 200
         _目标压力 = 500 * 6
         _焊接目标温度 = 200

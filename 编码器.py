@@ -2,16 +2,24 @@ from machine import Pin
 import asyncio
 from lib.旋转编码器 import Encoder
 from llib.config import CG
-from lib import udp
 
 
 def 右按钮任务():
+    # 是否工作
     CG.WORK.work = not CG.WORK.work
-    if CG.WORK.热压:
-        CG.WORK.热压退出 = True
+
+    if CG.WORK.work:  # 开始工作
+        if CG.WORK.热压:
+            CG.WORK.热压进入 = True
+        else:
+            CG.WORK.焊接进入 = True
+    else:  # 退出工作
+        if CG.WORK.热压:  # 热压退出需要复位升降台
+            CG.WORK.热压退出 = True
 
 
 def 左按钮任务():
+    # 切换任务模式
     if CG.WORK.work:
         return
     CG.WORK.热压 = not CG.WORK.热压

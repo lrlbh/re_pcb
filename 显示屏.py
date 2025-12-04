@@ -1,6 +1,6 @@
 import time
-from lib import st7796便宜, lcd
-from llib import tools
+from lib import st7796便宜, lcd, udp
+from lib import tools
 from llib.config import CG
 from machine import SPI
 import asyncio

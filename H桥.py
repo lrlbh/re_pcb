@@ -1,6 +1,6 @@
 import asyncio
 from llib.config import CG
-from llib import tools
+from lib import tools
 
 
 @tools.catch_and_report("H桥采样任务")

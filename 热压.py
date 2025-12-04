@@ -1,4 +1,4 @@
-from llib import tools
+from lib import tools, udp
 from llib.config import CG
 import asyncio
 
@@ -15,6 +15,21 @@ async def run():
 
 
 async def work():
+    
+    if CG.WORK.热压进入:
+        # udp.send("热压进入")
+        CG.WORK.热压进入 = False
+        CG.TEMP.adj()
+        CG.H桥.adj()
+        CG.KG.adj()
+        CG.POW.adj()
+        
+    if CG.WORK.焊接进入:
+        # udp.send("焊接进入")
+        CG.WORK.焊接进入 = False
+        CG.TEMP.adj()
+        CG.POW.adj()
+        
     if CG.WORK.热压:
         温控热压()
         压控_open()
@@ -28,6 +43,7 @@ async def no_work():
 
     # 特殊处理一下热压刚刚关断，电流控制电机复位关断
     if CG.WORK.热压退出:  # 刚刚关断状态
+        # udp.send("热压退出")
         CG.WORK.热压退出 = False
         CG.H桥.down()  # 电机向下
         await asyncio.sleep(1.2)  # 避免启动电流

@@ -18,7 +18,7 @@
 
 import asyncio
 from llib.config import CG
-from llib import tools
+from lib import tools
 
 @tools.catch_and_report("POW采样任务")
 async def run():

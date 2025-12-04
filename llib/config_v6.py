@@ -1,5 +1,5 @@
 from machine import Pin,ADC,PWM
-from llib import tools
+from lib import tools
 
 class CG:
     class 频率:
