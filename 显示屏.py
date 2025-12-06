@@ -1,5 +1,5 @@
 import time
-from lib import st7796便宜, lcd, udp
+from lib import st7796便宜, lcd
 from lib import tools
 from llib.config import CG
 from machine import SPI
@@ -39,7 +39,7 @@ async def run():
         size_h=160,
         多少格=998,
         # 通道顺序：电压, PWM, 温度, 电流
-        波形像素=[10, 10, 10, 10],  # 缩放/像素相关：电压, PWM, 温度, 电流
+        波形像素=[5, 5, 5, 5],  # 缩放/像素相关：电压, PWM, 温度, 电流
         data_min=[18, 0, 0, 0],  # 最小值：电压 18，其它 0
         data_max=[
             26,
@@ -59,6 +59,7 @@ async def run():
     st.def_字符.all += "温度电压流功率校准前后压力风扇转速当前目标热电耦状态热转印热压中焊接加热台℃口范围零飘冷端≈上下限毫伏微最高低自重补偿机保护关断延迟"
     st.load_bmf("/no_delete/字库.bmf", {16: st.def_字符.all, 32: st.def_字符.all})
     st.fill(st.color.黑)
+    st.set_超时ms(500)
     txt1 = st.new_txt("状态:焊接|1.5/7.8MiB", 32, 背景色=st.color.深灰)
     txt2 = st.new_txt("温度:123/300℃", 32, 背景色=st.color.浅灰)
     txt3 = st.new_txt("冷端:22.22℃", 16, 背景色=st.color.浅灰)
@@ -88,10 +89,9 @@ async def run():
     _ = st.new_txt("PWM:0~100 ", 32, 字体色=st.color.黑, 背景色=st.color.浅灰)
     _ = st.new_txt("温度:0~300", 32, 字体色=st.color.绿, 背景色=st.color.浅灰)
 
-    # i = 0
     while True:
-        # i+=1
         # s = time.ticks_ms()
+
         # 是否在工作，工作在什么模式
         if CG.WORK.work:
             字体色 = st.color.黄
@@ -103,9 +103,8 @@ async def run():
             txt1.up_data("焊接", 3, 字体色=字体色)
 
         # 剩余内存，比较耗时
-        # if i == 10:
         txt1.up_data(tools.get_mem_str(), 6)
-        # i = 0
+
         # 平均温度
         if (
             time.ticks_diff(time.ticks_ms(), CG.TEMP.热电耦平均温度[1])
@@ -155,7 +154,7 @@ async def run():
 
         # 加热电流
         data = list(CG.POW.电流.get_new())
-        data[0] = "{:4.1f}A >{:3}%".format(data[0], CG.Pin.pow_pwm.duty_100())
+        data[0] = "{:4.1f}A >{:3}%".format(data[0], round(CG.Pin.pow_pwm.duty_100()))
         txt9.up_data_time(data, 4)
 
         # 加热电流零飘
@@ -188,7 +187,7 @@ async def run():
 
         # 风扇
         data = list(CG.FAN.fan_read.get_new())
-        data[0] = "{:4.0f}-->{:3.0f}%".format(data[0], CG.Pin.fan_pwm.duty_100())
+        data[0] = "{:4.0f}-->{:3.0f}%".format(data[0], round(CG.Pin.fan_pwm.duty_100()))
         txt19.up_data_time(data, 5)
 
         CG.UI.st波形.更新()

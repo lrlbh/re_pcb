@@ -57,9 +57,6 @@ class CG:
         
         fan_pwm = 0
         
-        
-        
-
 
     class Pin:
         tft_SCK = Pin(38)  # SPI sck

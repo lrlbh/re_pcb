@@ -1433,7 +1433,6 @@ class LCD:
     def _load_bmf_select(self, path, 需要的字符):
         # s = time.ticks_ms()
 
-
         # —— 读取固定上限（保留原 buf）——
         size = 1024 * 50
         buf = bytearray(size)
@@ -1574,17 +1573,23 @@ class LCD:
             背景色,
         )
 
+    def set_超时ms(self, 超时ms):
+        self._超时ms = 超时ms
+
     def new_txt(
         self,
         字符串,
         size,
-        超时=500,
+        超时=None,
         x=None,
         y=None,
         字体色=None,
         背景色=None,
         缓存=False,
     ):
+        if 超时 is None:
+            超时 = self._超时ms
+
         return 字符区域(
             字符串,
             size,
@@ -1778,16 +1783,15 @@ class 波形:
                 index = self._允许的最大下标[通道_i]
             if index < 0:
                 index = 0
-                
+
             # 每个像素多少个字节做一下偏移
             index = int(index) * self._size_byte
             inedx_p = index + self._波形len[通道_i]
             还原i.append(index)
             还原i_p.append(inedx_p)
-            
 
             # 数据更新到背景色中
-            self._td[index : inedx_p] = self._波形色[通道_i]
+            self._td[index:inedx_p] = self._波形色[通道_i]
 
         # # 查看有无，不合理数据
         # if len(td) > self._size_h * self._size_byte:
@@ -1795,7 +1799,7 @@ class 波形:
         #     return
 
         self._append(self._td)
-        
+
         # 还原颜色
         for i in range(len(data)):
             self._td[还原i[i] : 还原i_p[i]] = self._波形色_还原[i]

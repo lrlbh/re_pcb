@@ -1,5 +1,5 @@
 import asyncio
-from lib import Fan, tools, udp
+from lib import Fan, tools
 from llib.config import CG
 
 @tools.catch_and_report("风扇采样任务")

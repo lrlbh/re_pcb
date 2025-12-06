@@ -52,4 +52,6 @@ def delete_dir(dir_path):
     except Exception as e:
         udp.send(f"⚠️ 删除目录失败: {dir_path}, 错误: {e}")
 
-delete_all_except()
+# delete_all_except()
+
+os.remove("/no_delete/config.json")

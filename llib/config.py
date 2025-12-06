@@ -1,14 +1,14 @@
 from machine import Pin, ADC, SPI
 from lib import tools
-from lib import pwm, lcd, disk_config
+from lib import pwm, lcd, disk_config, filter
 import time
 import asyncio
 
 
 class 方便修改:
     校准次数 = 10_000
-    平均次数 = 100
-    采样间隔MS = 24
+    平均次数 = 5
+    采样间隔MS = 200
 
 
 class CG(disk_config.DiskConfig):
@@ -18,7 +18,7 @@ class CG(disk_config.DiskConfig):
         _采样间隔MS = 方便修改.采样间隔MS
         _关闭电流MA = 104
         _保护电流MA = 600
-        _关闭延迟S = 5
+        _关闭延迟S = 4
 
         零飘 = 0
         电流 = tools.环形List(10000, (0, time.ticks_ms()))
@@ -68,13 +68,14 @@ class CG(disk_config.DiskConfig):
     class TEMP:
         # 热电耦参数
         _校准次数 = 方便修改.校准次数
-        _采样次数 = 方便修改.平均次数
-        _采样间隔MS = 方便修改.采样间隔MS
+        _采样次数 = 1
+        _采样间隔MS = 20
         _PGA = 80
         _R1阻值 = 430_000
         _输入电压uv = 3_300_000
 
         热电耦平均温度 = [0, 0]
+        卡尔曼滤波器 = filter.Kalman(25, Q=4.3e-5, R=1.1)
         k_零飘 = []
         k_max = []
         k_min = []
@@ -191,7 +192,7 @@ class CG(disk_config.DiskConfig):
 
     class FAN:
         # 风扇参数
-        _采样间隔MS = 12000
+        _采样间隔MS = 1000
         fan_read = tools.环形List(10000, (0, time.ticks_ms()))
 
     class WORK:
@@ -204,7 +205,7 @@ class CG(disk_config.DiskConfig):
 
         _目标温度 = 200
         _目标压力 = 500 * 6
-        _焊接目标温度 = 200
+        _焊接目标温度 = 88
         _fan_pwm = 0
 
     class Pin:
