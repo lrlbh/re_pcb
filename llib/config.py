@@ -53,7 +53,7 @@ class CG(disk_config.DiskConfig):
         _自重克 = 280
         _PGA = 101
         _传感器量程_g = 500 * 20  # 10KG
-        _激励电压mv = 3300
+        _激励电压mv = 3000
 
         # 灵敏度uv(满量程输出) / 量程克(10KG=20斤) * 放大倍数
         # 传感器描述里面误差基本来自这里，这里可以使用校准后的参数
@@ -72,10 +72,11 @@ class CG(disk_config.DiskConfig):
         _采样间隔MS = 20
         _PGA = 80
         _R1阻值 = 430_000
-        _输入电压uv = 3_300_000
+        _输入电压uv = 3_000_000
 
         热电耦平均温度 = [0, 0]
-        卡尔曼滤波器 = filter.Kalman(25, Q=4.3e-5, R=1.1)
+        # 卡尔曼滤波器 = filter.Kalman(25, Q=4.3e-5, R=1.1)
+        卡尔曼滤波器 = filter.Kalman(25, Q=0.000144, R=0.29)
         k_零飘 = []
         k_max = []
         k_min = []
@@ -209,47 +210,49 @@ class CG(disk_config.DiskConfig):
         _fan_pwm = 0
 
     class Pin:
-        tft_BLK = 10  # 背光
-        tft_RESET = 11  # 复位
-        tft_SDO = 12  # SPI miso # 不用必须 None
-        tft_SDA = 13  # SPI mosi
-        tft_SCK = 14  # SPI sck
-        tft_DC = 21  # 数据 - 命令
-        tft_CS = 47  # 片选
+    # ==================== LCD（只改数值，不改名字）================
+        tft_BLK   = 13     # 新板背光在 IO13（LCD_LED）
+        tft_RESET = 14
+        tft_SDA   = 15
+        tft_SCK   = 16
+        tft_DC    = 17
+        tft_CS    = 18
+        tft_SDO   = None
 
-        # 编码器
-        左编码器A = 40
-        左编码器B = 41
-        左SW = Pin(39, Pin.IN, Pin.PULL_UP)
-        右编码器A = 42
-        右编码器B = 44
-        右SW = Pin(43, Pin.IN, Pin.PULL_UP)
+        # ==================== 编码器（只改数值，名字完全不动！）================
+        左编码器A = 21        # 新板 BMQ_L_A
+        左编码器B = 47        # 新板 BMQ_L_B
+        左SW      = Pin(41, Pin.IN, Pin.PULL_UP)   # 新板 JD（左旋钮按键）
 
-        # 称重
-        kg_adc = ADC(8, atten=ADC.ATTN_0DB)
+        右编码器A = 44        # 新板 BMQ_R_A
+        右编码器B = 43        # 新板 BMQ_R_B
+        右SW      = Pin(42, Pin.IN, Pin.PULL_UP)   # 新板 JMS（右旋钮按键）
 
-        # 热电耦
-        k_ntc = ADC(7, atten=ADC.ATTN_0DB)
-        k_sw = Pin(15, Pin.OUT)
+        # ==================== 称重 & 热电偶（完全不变）================
+        kg_adc = ADC(7, atten=ADC.ATTN_0DB)
+        k_ntc  = ADC(4, atten=ADC.ATTN_0DB)
+        k_sw   = Pin(11, Pin.OUT)
+
         k_adc = []
-        for k_i in [6, 4, 5]:
+        for k_i in [5, 6, 8]:
             k_adc.append(ADC(k_i, atten=ADC.ATTN_0DB))
 
-        # 加热片
-        pow_pwm = pwm.PWM(48, freq=24000, duty_u16=0)._init(5, 95)
-        pow_adc = ADC(2, atten=ADC.ATTN_0DB)
+        # ==================== 加热片（完全不变）================
+        pow_pwm = pwm.PWM(12, freq=24000, duty_u16=0)._init(5, 95)
+        pow_adc = ADC(10, atten=ADC.ATTN_0DB)
 
-        # H桥
-        m_pwm1 = pwm.PWM(16, freq=24_000, duty_u16=65535)._init()
-        m_pwm2 = pwm.PWM(17, freq=24_000, duty_u16=65535)._init()
-        m_adc = ADC(1, atten=ADC.ATTN_0DB)
+        # ==================== 电机 H 桥（恢复到新板真实引脚）================
+        m_pwm1 = pwm.PWM(40, freq=24000, duty_u16=65535)._init()   # 新板 IO40
+        m_pwm2 = pwm.PWM(39, freq=24000, duty_u16=65535)._init()   # 新板 IO39
+        m_adc  = ADC(1, atten=ADC.ATTN_0DB)
 
-        # 风扇pwm
-        fan_pwm = pwm.PWM(38, freq=24000, duty_u16=0)._init()
-        fan_fead = 18
+        # ==================== 风扇（完全不变）================
+        fan_pwm  = pwm.PWM(48, freq=24000, duty_u16=0)._init()
+        fan_read = 38
 
-        # 电压
-        v_adc = ADC(9, atten=ADC.ATTN_0DB)
+        # ==================== 电源电压（完全不变）================
+        v_adc = ADC(9, atten=ADC.ATTN_0DB)   # IO09                    # IO09 V_ADC
+
 
     class UI:
         # UI

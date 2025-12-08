@@ -19,6 +19,7 @@ def 右按钮任务():
 
 
 def 左按钮任务():
+    # CG.Pin.pow_pwm.duty_100(50)
     # 切换任务模式
     if CG.WORK.work:
         return

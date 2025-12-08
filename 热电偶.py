@@ -89,7 +89,7 @@ async def run():
         CG.TEMP.热电耦平均温度[0] = CG.TEMP.卡尔曼滤波器.get_data(
             CG.TEMP.热电耦平均温度[0]
         )
-
+ 
         # 存入环形内存
         temp_3.append(time.ticks_ms())
         CG.TEMP.热电耦温度.append(tuple(temp_3))

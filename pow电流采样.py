@@ -18,16 +18,17 @@
 
 import asyncio
 from llib.config import CG
-from lib import tools
+from lib import tools, udp,filter
 
 @tools.catch_and_report("POW采样任务")
 async def run():
     CG.POW.adj()
     await asyncio.sleep(3)
+    # 卡尔曼滤波器 = filter.Kalman(0, Q=0.002, R=3)
     while True:
         ret = tools.ADCS_AVG([CG.Pin.pow_adc, CG.Pin.v_adc], CG.POW._采样次数)
         电流 = ret[0]
-        电流 -= CG.POW.电流零飘
+        电流 -= CG.POW.电流零飘 
         电流 /= 1000_000  # 单位V
         电流 /= 100  # 放大倍数
         电流 /= 0.0003  # 阻值
@@ -37,7 +38,9 @@ async def run():
         电压 *= 33
         电压 /= 1000_000
         CG.POW.输入电压.append_time(电压)
-         
+        # udp.send(卡尔曼滤波器.get_data(round(电流,3) ))
+        udp.send(电流)
+        
         CG.UI.st波形.append_data(
             [
                 电压,

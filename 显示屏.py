@@ -82,7 +82,7 @@ async def run():
     txt16 = st.new_txt("电机:9999mA", 32, 背景色=st.color.深灰)
     txt17 = st.new_txt("零飘:999关断:999mA", 16, 背景色=st.color.深灰)
     txt18 = st.new_txt("延迟: 6s保护:999mA", 16, 背景色=st.color.深灰)
-    txt19 = st.new_txt("风扇转速:2222 ->999%", 32, 背景色=st.color.浅灰)
+    txt19 = st.new_txt("风扇转速:2222 ->999%", 32, 背景色=st.color.浅灰,超时=2000)
     st.new_txt(" " * 20, 32, 背景色=st.color.深灰)
     _ = st.new_txt("电流:0~30 ", 32, 字体色=st.color.红, 背景色=st.color.浅灰)
     _ = st.new_txt("电压:18~26", 32, 字体色=st.color.蓝, 背景色=st.color.浅灰)

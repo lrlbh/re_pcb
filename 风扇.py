@@ -5,7 +5,7 @@ from llib.config import CG
 @tools.catch_and_report("风扇采样任务")
 async def run():
 
-    zs = Fan.Fan(CG.Pin.fan_fead)
+    zs = Fan.Fan(CG.Pin.fan_read)
     while True:
         CG.Pin.fan_pwm.duty_u16(CG.WORK._fan_pwm)
         CG.FAN.fan_read.append_time(zs.read())
