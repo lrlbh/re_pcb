@@ -1,10 +1,11 @@
 import asyncio
 from llib.config import CG
-from lib import tools
+from lib import tools, udp
+
 
 @tools.catch_and_report("KG采样任务")
 async def run():
-    CG.KG.adj() 
+    CG.KG.adj()
 
     while True:
         # 读取电压
@@ -14,5 +15,5 @@ async def run():
             (adc_uv - CG.KG.称重零飘) / CG.KG.每克电压uv + CG.KG._自重克
         )
 
-        # udp.send(  Config.共享数据.kg.get_new())
+        # udp.send(CG.KG.kg.get_new()[0])
         await asyncio.sleep_ms(CG.KG._采样间隔MS)

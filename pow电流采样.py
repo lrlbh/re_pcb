@@ -39,7 +39,7 @@ async def run():
         电压 /= 1000_000
         CG.POW.输入电压.append_time(电压)
         # udp.send(卡尔曼滤波器.get_data(round(电流,3) ))
-        udp.send(电流)
+        # udp.send(电流)
         
         CG.UI.st波形.append_data(
             [

@@ -11,7 +11,7 @@ async def run():
         else:
             await no_work()
 
-        await asyncio.sleep_ms(300)
+        await asyncio.sleep_ms(50)
 
 
 async def work():
@@ -73,7 +73,7 @@ def 压控_close():
 
 
 def 温控():
-    pwm = (CG.WORK._焊接目标温度 - CG.TEMP.热电耦平均温度[0]) * 10
+    pwm = (CG.WORK._焊接目标温度 - CG.TEMP.热电耦平均温度[0]) * 21
     CG.Pin.pow_pwm.duty_100(pwm)
 
 

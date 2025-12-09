@@ -7,7 +7,7 @@ import asyncio
 
 class 方便修改:
     校准次数 = 10_000
-    平均次数 = 5
+    平均次数 = 1
     采样间隔MS = 200
 
 
@@ -44,7 +44,7 @@ class CG(disk_config.DiskConfig):
 
     class BMQ:
         _轮询间隔MS = 50
-        _抖动等待MS = 10
+        _抖动等待MS = 100
 
     class KG:
         _校准次数 = 方便修改.校准次数
@@ -69,7 +69,7 @@ class CG(disk_config.DiskConfig):
         # 热电耦参数
         _校准次数 = 方便修改.校准次数
         _采样次数 = 1
-        _采样间隔MS = 20
+        _采样间隔MS = 5
         _PGA = 80
         _R1阻值 = 430_000
         _输入电压uv = 3_000_000
@@ -210,28 +210,28 @@ class CG(disk_config.DiskConfig):
         _fan_pwm = 0
 
     class Pin:
-    # ==================== LCD（只改数值，不改名字）================
-        tft_BLK   = 13     # 新板背光在 IO13（LCD_LED）
+        # ==================== LCD（只改数值，不改名字）================
+        tft_BLK = 13  # 新板背光在 IO13（LCD_LED）
         tft_RESET = 14
-        tft_SDA   = 15
-        tft_SCK   = 16
-        tft_DC    = 17
-        tft_CS    = 18
-        tft_SDO   = None
+        tft_SDA = 15
+        tft_SCK = 16
+        tft_DC = 17
+        tft_CS = 18
+        tft_SDO = None
 
         # ==================== 编码器（只改数值，名字完全不动！）================
-        左编码器A = 21        # 新板 BMQ_L_A
-        左编码器B = 47        # 新板 BMQ_L_B
-        左SW      = Pin(41, Pin.IN, Pin.PULL_UP)   # 新板 JD（左旋钮按键）
+        左编码器A = 21  # 新板 BMQ_L_A
+        左编码器B = 47  # 新板 BMQ_L_B
+        左SW = Pin(41, Pin.IN, Pin.PULL_UP)  # 新板 JD（左旋钮按键）
 
-        右编码器A = 44        # 新板 BMQ_R_A
-        右编码器B = 43        # 新板 BMQ_R_B
-        右SW      = Pin(42, Pin.IN, Pin.PULL_UP)   # 新板 JMS（右旋钮按键）
+        右编码器A = 44  # 新板 BMQ_R_A
+        右编码器B = 43  # 新板 BMQ_R_B
+        右SW = Pin(42, Pin.IN, Pin.PULL_UP)  # 新板 JMS（右旋钮按键）
 
         # ==================== 称重 & 热电偶（完全不变）================
         kg_adc = ADC(7, atten=ADC.ATTN_0DB)
-        k_ntc  = ADC(4, atten=ADC.ATTN_0DB)
-        k_sw   = Pin(11, Pin.OUT)
+        k_ntc = ADC(4, atten=ADC.ATTN_0DB)
+        k_sw = Pin(11, Pin.OUT)
 
         k_adc = []
         for k_i in [5, 6, 8]:
@@ -242,17 +242,16 @@ class CG(disk_config.DiskConfig):
         pow_adc = ADC(10, atten=ADC.ATTN_0DB)
 
         # ==================== 电机 H 桥（恢复到新板真实引脚）================
-        m_pwm1 = pwm.PWM(40, freq=24000, duty_u16=65535)._init()   # 新板 IO40
-        m_pwm2 = pwm.PWM(39, freq=24000, duty_u16=65535)._init()   # 新板 IO39
-        m_adc  = ADC(1, atten=ADC.ATTN_0DB)
+        m_pwm1 = pwm.PWM(40, freq=24000, duty_u16=65535)._init()  # 新板 IO40
+        m_pwm2 = pwm.PWM(39, freq=24000, duty_u16=65535)._init()  # 新板 IO39
+        m_adc = ADC(1, atten=ADC.ATTN_0DB)
 
         # ==================== 风扇（完全不变）================
-        fan_pwm  = pwm.PWM(48, freq=24000, duty_u16=0)._init()
+        fan_pwm = pwm.PWM(48, freq=24000, duty_u16=0)._init()
         fan_read = 38
 
         # ==================== 电源电压（完全不变）================
-        v_adc = ADC(9, atten=ADC.ATTN_0DB)   # IO09                    # IO09 V_ADC
-
+        v_adc = ADC(9, atten=ADC.ATTN_0DB)  # IO09                    # IO09 V_ADC
 
     class UI:
         # UI

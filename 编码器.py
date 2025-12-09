@@ -1,29 +1,60 @@
+import time
 from machine import Pin
 import asyncio
+from lib import udp, tools
 from lib.旋转编码器 import Encoder
 from llib.config import CG
 
 
 def 右按钮任务():
-    # 是否工作
-    CG.WORK.work = not CG.WORK.work
+    上次触发时间 = time.ticks_ms()
 
-    if CG.WORK.work:  # 开始工作
-        if CG.WORK.热压:
-            CG.WORK.热压进入 = True
-        else:
-            CG.WORK.焊接进入 = True
-    else:  # 退出工作
-        if CG.WORK.热压:  # 热压退出需要复位升降台
-            CG.WORK.热压退出 = True
+    def t(pin):
+        nonlocal 上次触发时间
+        本次触发时间 = time.ticks_ms()
+        # 500ms，才能触发一次避免抖动
+        if time.ticks_diff(本次触发时间, 上次触发时间) < CG.BMQ._抖动等待MS:
+            return
+        
+        ###############code###############
+        # 是否工作
+        CG.WORK.work = not CG.WORK.work
+
+        if CG.WORK.work:  # 开始工作
+            if CG.WORK.热压:
+                CG.WORK.热压进入 = True
+            else:
+                CG.WORK.焊接进入 = True
+        else:  # 退出工作
+            if CG.WORK.热压:  # 热压退出需要复位升降台
+                CG.WORK.热压退出 = True
+        ###############code###############
+                
+        上次触发时间 = 本次触发时间
+
+    return t
 
 
+# CG.Pin.pow_pwm.duty_100(50)
 def 左按钮任务():
-    # CG.Pin.pow_pwm.duty_100(50)
-    # 切换任务模式
-    if CG.WORK.work:
-        return
-    CG.WORK.热压 = not CG.WORK.热压
+    上次触发时间 = time.ticks_ms()
+
+    def t(pin):
+        nonlocal 上次触发时间
+        本次触发时间 = time.ticks_ms()
+        # 切换任务模式
+        if time.ticks_diff(本次触发时间, 上次触发时间) < CG.BMQ._抖动等待MS:
+            udp.send(time.ticks_diff(本次触发时间, 上次触发时间))
+            return
+
+        ###############code###############
+        if CG.WORK.work:
+            return
+        CG.WORK.热压 = not CG.WORK.热压
+        ###############code###############
+        上次触发时间 = 本次触发时间
+
+    return t
 
 
 def 编码器右(变化量, *args):
@@ -45,6 +76,7 @@ def 编码器左(变化量, *args):
 
 
 # 主循环，保持程序运行
+@tools.catch_and_report("编码器任务")
 async def run():
     Encoder(
         pin_x=Pin(CG.Pin.左编码器A, Pin.IN, Pin.PULL_UP),  # 编码器X相引脚
@@ -66,19 +98,10 @@ async def run():
         callback=lambda _, change, *args: 编码器右(change, *args),
     )
 
+    # 上升沿，松开触发
+    CG.Pin.右SW.irq(trigger=Pin.IRQ_RISING, handler=右按钮任务())
+    CG.Pin.左SW.irq(trigger=Pin.IRQ_RISING, handler=左按钮任务())
+
     while True:
-        if not CG.Pin.左SW.value():
-            while True:
-                await asyncio.sleep_ms(CG.BMQ._抖动等待MS)
-                if CG.Pin.左SW.value():
-                    break
-            左按钮任务()
+        await asyncio.sleep(100)
 
-        if not CG.Pin.右SW.value():
-            while True:
-                await asyncio.sleep_ms(CG.BMQ._抖动等待MS)
-                if CG.Pin.右SW.value():
-                    break
-            右按钮任务()
-
-        await asyncio.sleep_ms(CG.BMQ._抖动等待MS)
