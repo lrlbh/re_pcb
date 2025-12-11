@@ -12,24 +12,24 @@ def 右按钮任务():
     def t(pin):
         nonlocal 上次触发时间
         本次触发时间 = time.ticks_ms()
-        # 500ms，才能触发一次避免抖动
         if time.ticks_diff(本次触发时间, 上次触发时间) < CG.BMQ._抖动等待MS:
             return
-        
+
         ###############code###############
         # 是否工作
         CG.WORK.work = not CG.WORK.work
 
-        if CG.WORK.work:  # 开始工作
+        if CG.WORK.work:  # 进入工作分支
             if CG.WORK.热压:
                 CG.WORK.热压进入 = True
+                CG.WORK.热压首次足压力 = False
             else:
                 CG.WORK.焊接进入 = True
-        else:  # 退出工作
+        else:  # 退出工作分支
             if CG.WORK.热压:  # 热压退出需要复位升降台
                 CG.WORK.热压退出 = True
         ###############code###############
-                
+
         上次触发时间 = 本次触发时间
 
     return t
@@ -44,7 +44,6 @@ def 左按钮任务():
         本次触发时间 = time.ticks_ms()
         # 切换任务模式
         if time.ticks_diff(本次触发时间, 上次触发时间) < CG.BMQ._抖动等待MS:
-            udp.send(time.ticks_diff(本次触发时间, 上次触发时间))
             return
 
         ###############code###############
@@ -59,14 +58,14 @@ def 左按钮任务():
 
 def 编码器右(变化量, *args):
     if CG.WORK.热压:
-        CG.WORK._目标温度 += 变化量
+        CG.WORK._热压目标温度 += 变化量
     else:
         CG.WORK._焊接目标温度 += 变化量
 
 
 def 编码器左(变化量, *args):
     if CG.WORK.热压:
-        CG.WORK._目标压力 += 变化量 * 100
+        CG.WORK._热压自动关闭时间 += 变化量
     else:
         CG.WORK._fan_pwm += 变化量 * 6550
         if CG.WORK._fan_pwm < 0:
@@ -104,4 +103,3 @@ async def run():
 
     while True:
         await asyncio.sleep(100)
-

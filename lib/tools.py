@@ -67,7 +67,7 @@ def get_mem_str():
     total_mib = total / (1024 * 1024)
 
     # 形如：1.2/7.9MiB  → 正好 10 个字符（前提是 <10MiB）
-    s = "{:.1f}/{:.1f}".format(used_mib, total_mib)
+    s = "{:.1f}/{:.1f}MiB".format(used_mib, total_mib)
 
     # udp.send(time.ticks_ms() - ss)
     # 保证不超过 10 个字符（以后换更大内存板子时也不会溢出）
@@ -96,7 +96,7 @@ def catch_and_report(name: str):
                 error_text = buf.getvalue()
 
                 report = f"【任务死亡】{name}\n{error_text}"
-                print(report)  # 串口看得见
+                # print(report)  # 串口看得见
                 udp.send(report)  # 网络看得见
 
                 # 可选：写入日志文件

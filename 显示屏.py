@@ -61,10 +61,10 @@ async def run():
     st.fill(st.color.黑)
     st.set_超时ms(500)
     txt1 = st.new_txt("状态:焊接|1.5/7.8MiB", 32, 背景色=st.color.深灰)
-    txt2 = st.new_txt("温度:123/300℃", 32, 背景色=st.color.浅灰)
-    txt3 = st.new_txt("冷端:22.22℃", 16, 背景色=st.color.浅灰)
-    st.new_txt(
-        "UvMax:{:04.0f}mV".format(CG.TEMP.满量程read_uv / 1000),
+    txt2 = st.new_txt("温度:123.1/300℃", 32, 背景色=st.color.浅灰)
+    txt3 = st.new_txt("冷:22.22", 16, 背景色=st.color.浅灰)
+    txt4 = st.new_txt(
+        "Max:{:04.0f}".format(CG.TEMP.满量程read_uv / 1000),
         16,
         背景色=st.color.浅灰,
     )
@@ -82,13 +82,13 @@ async def run():
     txt16 = st.new_txt("电机:9999mA", 32, 背景色=st.color.深灰)
     txt17 = st.new_txt("零飘:999关断:999mA", 16, 背景色=st.color.深灰)
     txt18 = st.new_txt("延迟: 6s保护:999mA", 16, 背景色=st.color.深灰)
-    txt19 = st.new_txt("风扇转速:2222 ->999%", 32, 背景色=st.color.浅灰,超时=2000)
+    txt19 = st.new_txt("风扇转速:2222 ->999%", 32, 背景色=st.color.浅灰, 超时=2000)
     st.new_txt(" " * 20, 32, 背景色=st.color.深灰)
     _ = st.new_txt("电流:0~30 ", 32, 字体色=st.color.红, 背景色=st.color.浅灰)
     _ = st.new_txt("电压:18~26", 32, 字体色=st.color.蓝, 背景色=st.color.浅灰)
     _ = st.new_txt("PWM:0~100 ", 32, 字体色=st.color.黑, 背景色=st.color.浅灰)
     _ = st.new_txt("温度:0~300", 32, 字体色=st.color.绿, 背景色=st.color.浅灰)
-
+    # await asyncio.sleep(10000)
     while True:
         # s = time.ticks_ms()
 
@@ -103,7 +103,18 @@ async def run():
             txt1.up_data("焊接", 3, 字体色=字体色)
 
         # 剩余内存，比较耗时
-        txt1.up_data(tools.get_mem_str(), 6)
+        if CG.WORK.热压:
+            剩余时间 = CG.WORK._热压自动关闭时间 * 1000 - time.ticks_diff(
+                time.ticks_ms(), CG.WORK.热压进入ms
+            )
+            剩余时间 /= 1000
+            if CG.WORK.work and 剩余时间 > 0:
+                txt1.up_data("关延迟:{:3.0f}".format(剩余时间), 6)
+            else:
+                txt1.up_data("关延迟:{:3.0f}".format(CG.WORK._热压自动关闭时间), 6)
+        else:
+            if not CG.WORK.work:
+                txt1.up_data(tools.get_mem_str(), 6)
 
         # 平均温度
         if (
@@ -117,11 +128,11 @@ async def run():
             字体色 = st.color.绿
 
         if CG.WORK.热压:
-            temp_t = "{:3.0f}/{:3.0f}℃".format(
-                CG.TEMP.热电耦平均温度[0], CG.WORK._目标温度
+            temp_t = "{:5.1f}/{:3.0f}℃".format(
+                CG.TEMP.热电耦平均温度[0], CG.WORK._热压目标温度
             )
         else:
-            temp_t = "{:3.0f}/{:3.0f}℃".format(
+            temp_t = "{:5.1f}/{:3.0f}℃".format(
                 CG.TEMP.热电耦平均温度[0], CG.WORK._焊接目标温度
             )
         txt2.up_data(
@@ -131,7 +142,9 @@ async def run():
         )
 
         # 冷端温度
-        txt3.up_data("{:5.2f}℃".format(CG.TEMP.ntc_temp), 3)
+        txt3.up_data("{:4.2f}".format(CG.TEMP.ntc_temp), 2)
+
+        txt4.up_data("{0:4.0f}".format(CG.TEMP.满量程read_uv / 1000), 4)
 
         # 所有热电耦温度
         txt5.up_data(

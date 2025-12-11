@@ -51,7 +51,7 @@ async def run():
         # 这一坨输出没有冷端补偿的温度
         temp_3 = []
         for index, k in enumerate(CG.Pin.k_adc):
-            原始读数 = tools.ADC_AVG(k, CG.TEMP._采样次数)
+            原始读数 = k.read_uv()
             校准零飘后 = 原始读数 - CG.TEMP.k_零飘[index]
             pga后 = 校准零飘后 / CG.TEMP._PGA
             temp_3.append(CG.TEMP.get_temp(pga后))
@@ -89,9 +89,13 @@ async def run():
         CG.TEMP.热电耦平均温度[0] = CG.TEMP.卡尔曼滤波器.get_data(
             CG.TEMP.热电耦平均温度[0]
         )
- 
+        # udp.send(CG.TEMP.热电耦平均温度[0] )
+
         # 存入环形内存
         temp_3.append(time.ticks_ms())
         CG.TEMP.热电耦温度.append(tuple(temp_3))
 
-        await asyncio.sleep_ms(CG.TEMP._采样间隔MS)
+        if CG.WORK.work:
+            await asyncio.sleep_ms(CG.TEMP._工作采样间隔MS)
+        else:
+            await asyncio.sleep_ms(CG.TEMP._非工作采样间隔MS)

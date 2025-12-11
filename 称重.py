@@ -1,6 +1,6 @@
 import asyncio
 from llib.config import CG
-from lib import tools, udp
+from lib import tools
 
 
 @tools.catch_and_report("KG采样任务")

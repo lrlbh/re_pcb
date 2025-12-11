@@ -1622,6 +1622,7 @@ class 字符区域:
         self._st = st
         self._size = size
         self._x_start = []
+        # self._非更新 = ["",0]
 
         # 起点
         self._x = x
