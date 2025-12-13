@@ -26,7 +26,7 @@ async def run():
     await asyncio.sleep(3)
     # 卡尔曼滤波器 = filter.Kalman(0, Q=0.002, R=3)
     while True:
-        ret = tools.ADCS_AVG([CG.Pin.pow_adc, CG.Pin.v_adc], CG.POW._采样次数)
+        ret = tools.ADCS_AVG([CG.POW.pow_adc, CG.POW.v_adc], CG.POW._采样次数)
         电流 = ret[0]
         电流 -= CG.POW.电流零飘 
         电流 /= 1000_000  # 单位V
@@ -44,7 +44,7 @@ async def run():
         CG.UI.st波形.append_data(
             [
                 电压,
-                CG.Pin.pow_pwm.duty_100(),
+                CG.POW.pow_pwm.duty_100(),
                 CG.TEMP.热电耦平均温度[0],
                 电流,
             ]

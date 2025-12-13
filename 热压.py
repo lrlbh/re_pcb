@@ -38,7 +38,7 @@ async def work():
 
 async def no_work():
     # 关闭PWM
-    CG.Pin.pow_pwm.duty_u16(0)
+    CG.POW.pow_pwm.duty_u16(0)
 
     # 特殊处理一下热压刚刚关断，电流控制电机复位关断
     if CG.WORK.热压退出:  # 刚刚关断状态
@@ -98,12 +98,12 @@ def 压控_close():
 
 def 温控焊接():
     pwm = (CG.WORK._焊接目标温度 - CG.TEMP.热电耦平均温度[0]) * 21
-    CG.Pin.pow_pwm.duty_100(pwm)
+    CG.POW.pow_pwm.duty_100(pwm)
 
 
 def 温控热压():
     pwm = (CG.WORK._热压目标温度 - CG.TEMP.热电耦平均温度[0]) * 21
-    CG.Pin.pow_pwm.duty_100(pwm)
+    CG.POW.pow_pwm.duty_100(pwm)
 
 
 # udp.send(

@@ -9,7 +9,7 @@ async def run():
 
     while True:
         # 读取电压
-        adc_uv = tools.ADC_AVG(CG.Pin.kg_adc, CG.KG._采样次数)
+        adc_uv = tools.ADC_AVG(CG.KG.kg_adc, CG.KG._采样次数)
         # 计算克数
         CG.KG.kg.append_time(
             (adc_uv - CG.KG.称重零飘) / CG.KG.每克电压uv + CG.KG._自重克

@@ -1,7 +1,7 @@
 import time
 from machine import Pin
 import asyncio
-from lib import udp, tools
+from lib import tools
 from lib.旋转编码器 import Encoder
 from llib.config import CG
 
@@ -78,8 +78,8 @@ def 编码器左(变化量, *args):
 @tools.catch_and_report("编码器任务")
 async def run():
     Encoder(
-        pin_x=Pin(CG.Pin.左编码器A, Pin.IN, Pin.PULL_UP),  # 编码器X相引脚
-        pin_y=Pin(CG.Pin.左编码器B, Pin.IN, Pin.PULL_UP),  # 编码器Y相引脚
+        pin_x=Pin(CG.BMQ.左编码器A, Pin.IN, Pin.PULL_UP),  # 编码器X相引脚
+        pin_y=Pin(CG.BMQ.左编码器B, Pin.IN, Pin.PULL_UP),  # 编码器Y相引脚
         v=0,  # 初始值
         div=4,  # 分辨率倍数
         # vmin=0,  # 最小值限制
@@ -88,8 +88,8 @@ async def run():
     )
 
     Encoder(
-        pin_x=Pin(CG.Pin.右编码器A, Pin.IN, Pin.PULL_UP),  # 编码器X相引脚
-        pin_y=Pin(CG.Pin.右编码器B, Pin.IN, Pin.PULL_UP),  # 编码器Y相引脚
+        pin_x=Pin(CG.BMQ.右编码器A, Pin.IN, Pin.PULL_UP),  # 编码器X相引脚
+        pin_y=Pin(CG.BMQ.右编码器B, Pin.IN, Pin.PULL_UP),  # 编码器Y相引脚
         v=0,  # 初始值
         div=4,  # 分辨率倍数
         # vmin=0,  # 最小值限制
@@ -98,8 +98,8 @@ async def run():
     )
 
     # 上升沿，松开触发
-    CG.Pin.右SW.irq(trigger=Pin.IRQ_RISING, handler=右按钮任务())
-    CG.Pin.左SW.irq(trigger=Pin.IRQ_RISING, handler=左按钮任务())
+    CG.BMQ.右SW.irq(trigger=Pin.IRQ_RISING, handler=右按钮任务())
+    CG.BMQ.左SW.irq(trigger=Pin.IRQ_RISING, handler=左按钮任务())
 
     while True:
         await asyncio.sleep(100)

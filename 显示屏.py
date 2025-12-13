@@ -1,61 +1,15 @@
 import time
-from lib import st7796便宜, lcd
 from lib import tools
 from llib.config import CG
-from machine import SPI
 import asyncio
 
 
 @tools.catch_and_report("显示屏任务")
 async def run():
-    CG.UI.spi = SPI(
-        1,
-        baudrate=100_000_000,
-        polarity=0,
-        phase=0,
-        sck=CG.Pin.tft_SCK,
-        mosi=CG.Pin.tft_SDA,
-        miso=CG.Pin.tft_SDO,
-    )
-    CG.UI.st = st7796便宜.ST7796_便宜(
-        spi=CG.UI.spi,
-        dc=CG.Pin.tft_DC,
-        size=lcd.LCD.Size.st7796,
-        bl=CG.Pin.tft_BLK,
-        rst=CG.Pin.tft_RESET,
-        cs=CG.Pin.tft_CS,
-        旋转=1,
-        color_bit=24,
-        像素缺失=(0, 0, 0, 0),
-        逆CS=False,
-    )
     st = CG.UI.st
+
     await st._init_async()
-
-    CG.UI.st波形 = st.new_波形(
-        w起点=0,
-        h起点=320,  # 波形区域左上角 Y
-        size_w=320,
-        size_h=160,
-        多少格=998,
-        # 通道顺序：电压, PWM, 温度, 电流
-        波形像素=[5, 5, 5, 5],  # 缩放/像素相关：电压, PWM, 温度, 电流
-        data_min=[18, 0, 0, 0],  # 最小值：电压 18，其它 0
-        data_max=[
-            26,
-            100,
-            300,
-            30,
-        ],  # 最大值：电压 26V, PWM 100%, 温度 300℃, 电流 30A
-        波形色=[
-            st.color_fn(0, 0, 255),  # 电压 → 蓝
-            st.color_fn(0, 0, 0),  # PWM  → 黑
-            st.color_fn(0, 255, 0),  # 温度 → 绿
-            st.color_fn(255, 0, 0),  # 电流 → 红
-        ],
-        背景色=st.color_fn(255, 255, 255),
-    )
-
+    st.bl(CG.UI._背光亮度)
     st.def_字符.all += "温度电压流功率校准前后压力风扇转速当前目标热电耦状态热转印热压中焊接加热台℃口范围零飘冷端≈上下限毫伏微最高低自重补偿机保护关断延迟"
     st.load_bmf("/no_delete/字库.bmf", {16: st.def_字符.all, 32: st.def_字符.all})
     st.fill(st.color.黑)
@@ -89,9 +43,13 @@ async def run():
     _ = st.new_txt("PWM:0~100 ", 32, 字体色=st.color.黑, 背景色=st.color.浅灰)
     _ = st.new_txt("温度:0~300", 32, 字体色=st.color.绿, 背景色=st.color.浅灰)
     # await asyncio.sleep(10000)
+    # i = 0
     while True:
         # s = time.ticks_ms()
-
+        # st.bl(i)
+        # i += 10
+        # if i >= 100:
+        #     i = 0
         # 是否在工作，工作在什么模式
         if CG.WORK.work:
             字体色 = st.color.黄
@@ -167,7 +125,7 @@ async def run():
 
         # 加热电流
         data = list(CG.POW.电流.get_new())
-        data[0] = "{:4.1f}A >{:3}%".format(data[0], round(CG.Pin.pow_pwm.duty_100()))
+        data[0] = "{:4.1f}A >{:3}%".format(data[0], round(CG.POW.pow_pwm.duty_100()))
         txt9.up_data_time(data, 4)
 
         # 加热电流零飘
@@ -200,10 +158,10 @@ async def run():
 
         # 风扇
         data = list(CG.FAN.fan_read.get_new())
-        data[0] = "{:4.0f}-->{:3.0f}%".format(data[0], round(CG.Pin.fan_pwm.duty_100()))
+        data[0] = "{:4.0f}-->{:3.0f}%".format(data[0], round(CG.FAN.fan_pwm.duty_100()))
         txt19.up_data_time(data, 5)
 
         CG.UI.st波形.更新()
 
         # udp.send(time.ticks_ms() - s)
-        await asyncio.sleep_ms(200)
+        await asyncio.sleep_ms(CG.UI._刷新间隔MS)

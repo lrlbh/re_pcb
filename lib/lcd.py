@@ -2,6 +2,8 @@ import asyncio
 import time
 from machine import Pin, SPI
 
+from lib.pwm import PWM
+
 # from lib import udp
 
 
@@ -766,6 +768,8 @@ class LCD:
         else:
             self._rst = None
 
+        self._bl_num = bl
+
         # 背光
         if bl is not None:
             self._bl = Pin(bl, Pin.OUT, value=1)
@@ -1262,6 +1266,19 @@ class LCD:
         if isinstance(r, (tuple, list)):
             r, g, b = r[:3]
         return bytes([r, g, b])
+
+    def bl(self, 百分比, 频率=300):
+        duty = int(百分比 * 655.35)
+        
+        if duty > 58000:
+            duty = 65535
+        elif duty < 0:
+            duty = 0
+
+        if duty == 65535:
+            self._bl = Pin(self._bl_num, Pin.OUT, value=1)
+        else:
+            self._bl = PWM(self._bl_num, freq=频率, duty_u16=duty)
 
     # 清屏
     def fill(self, color):

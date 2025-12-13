@@ -18,18 +18,15 @@
 import time
 import asyncio
 from llib.config import CG, tools
-from lib import ntc
+
 # import socket
 
 
 @tools.catch_and_report("热电耦采样任务")
 async def run():
-    # ntc对象
-    temp = ntc.NTC(CG.Pin.k_ntc, CG.TEMP._R1阻值, CG.TEMP._输入电压uv)
-
     # 标定满量程 read_uv 输出
     # 如果热电耦合全被使用，提供一个def
-    for k in CG.Pin.k_adc:
+    for k in CG.TEMP.k_adc:
         t_16 = []
         t_uv = []
         for _ in range(3):
@@ -50,7 +47,7 @@ async def run():
         # 设计了3路热电偶，正常只使用1路，所以使用温度最高的热电耦即可
         # 这一坨输出没有冷端补偿的温度
         temp_3 = []
-        for index, k in enumerate(CG.Pin.k_adc):
+        for index, k in enumerate(CG.TEMP.k_adc):
             原始读数 = k.read_uv()
             校准零飘后 = 原始读数 - CG.TEMP.k_零飘[index]
             pga后 = 校准零飘后 / CG.TEMP._PGA
@@ -72,7 +69,7 @@ async def run():
             CG.TEMP.热电耦平均温度[0] = 920
 
         # ntc温度
-        CG.TEMP.ntc_temp = temp.read(1)
+        CG.TEMP.ntc_temp = CG.TEMP.k_ntc.read(1)
         for i in range(len(temp_3)):
             temp_3[i] += CG.TEMP.ntc_temp
         CG.TEMP.热电耦平均温度[0] += CG.TEMP.ntc_temp

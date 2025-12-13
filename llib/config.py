@@ -1,8 +1,50 @@
 from machine import Pin, ADC, SPI
-from lib import tools
+from lib import Fan, ntc, st7796便宜, tools
 from lib import pwm, lcd, disk_config, filter
 import time
 import asyncio
+
+
+class MyPin:
+    # ==================== LCD（只改数值，不改名字）================
+    tft_BLK = 13  # 新板背光在 IO13（LCD_LED）
+    tft_RESET = 14
+    tft_SDA = 15
+    tft_SCK = 16
+    tft_DC = 17
+    tft_CS = 18
+    tft_SDO = None
+
+    # ==================== 编码器（只改数值，名字完全不动！）================
+    左编码器A = 21  # 新板 BMQ_L_A
+    左编码器B = 47  # 新板 BMQ_L_B
+    左SW = 41  # 新板 JD（左旋钮按键）
+
+    右编码器A = 44  # 新板 BMQ_R_A
+    右编码器B = 43  # 新板 BMQ_R_B
+    右SW = 42  # 新板 JMS（右旋钮按键）
+
+    # ==================== 称重 & 热电偶（完全不变）================
+    kg_adc = 7
+    k_ntc = 4
+    k_sw = 11
+    k_adc = [5, 6, 8]
+
+    # ==================== 加热片（完全不变）================
+    pow_pwm = 12
+    pow_adc = 10
+
+    # ==================== 电机 H 桥（恢复到新板真实引脚）================
+    m_pwm1 = 40
+    m_pwm2 = 39
+    m_adc = 1
+
+    # ==================== 风扇（完全不变）================
+    fan_pwm = 48
+    fan_read = 38
+
+    # ==================== 电源电压（完全不变）================
+    v_adc = 9
 
 
 class 方便修改:
@@ -16,41 +58,53 @@ class CG(disk_config.DiskConfig):
         _校准次数 = 方便修改.校准次数
         _采样次数 = 方便修改.平均次数
         _采样间隔MS = 方便修改.采样间隔MS
-        _关闭电流MA = 104
+        _关闭电流MA = 135
         _保护电流MA = 360
-        _关闭延迟S = 4
+        _关闭延迟S = 5
 
         零飘 = 0
         电流 = tools.环形List(10000, (0, time.ticks_ms()))
 
+        m_pwm1 = pwm.PWM(MyPin.m_pwm1, freq=24000, duty_u16=65535)._init()  # 新板 IO40
+        m_pwm2 = pwm.PWM(MyPin.m_pwm2, freq=24000, duty_u16=65535)._init()  # 新板 IO39
+        m_adc = ADC(MyPin.m_adc, atten=ADC.ATTN_0DB)
+
         @staticmethod
         def down():
-            CG.Pin.m_pwm1.duty_u16(0)
-            CG.Pin.m_pwm2.duty_u16(65535)
+            CG.H桥.m_pwm1.duty_u16(0)
+            CG.H桥.m_pwm2.duty_u16(65535)
 
         @staticmethod
         def up():
-            CG.Pin.m_pwm1.duty_u16(65535)
-            CG.Pin.m_pwm2.duty_u16(0)
+            CG.H桥.m_pwm1.duty_u16(65535)
+            CG.H桥.m_pwm2.duty_u16(0)
 
         @staticmethod
         def close():
-            CG.Pin.m_pwm1.duty_u16(65535)
-            CG.Pin.m_pwm2.duty_u16(65535)
+            CG.H桥.m_pwm1.duty_u16(65535)
+            CG.H桥.m_pwm2.duty_u16(65535)
 
         @staticmethod
         def adj():
-            CG.H桥.零飘 = tools.ADC_AVG(CG.Pin.m_adc, CG.H桥._校准次数)
+            CG.H桥.零飘 = tools.ADC_AVG(CG.H桥.m_adc, CG.H桥._校准次数)
 
     class BMQ:
         _抖动等待MS = 100
+        左SW = Pin(MyPin.左SW, Pin.IN, Pin.PULL_UP)
+        右SW = Pin(MyPin.右SW, Pin.IN, Pin.PULL_UP)
+
+        左编码器A = MyPin.左编码器A
+        左编码器B = MyPin.左编码器B
+
+        右编码器A = MyPin.右编码器A
+        右编码器B = MyPin.右编码器B
 
     class KG:
         _校准次数 = 方便修改.校准次数
         _采样次数 = 方便修改.平均次数
         _采样间隔MS = 方便修改.采样间隔MS
         _自重克 = 280
-        _PGA = 101
+        _PGA = 201
         _传感器量程_g = 500 * 20  # 10KG
         _激励电压mv = 3000
 
@@ -59,10 +113,11 @@ class CG(disk_config.DiskConfig):
         每克电压uv = _激励电压mv / _传感器量程_g * _PGA
         kg = tools.环形List(10000, (0, time.ticks_ms()))
         称重零飘 = 0
+        kg_adc = ADC(MyPin.kg_adc, atten=ADC.ATTN_0DB)
 
         @staticmethod
         def adj():
-            CG.KG.称重零飘 = tools.ADC_AVG(CG.Pin.kg_adc, CG.KG._校准次数)
+            CG.KG.称重零飘 = tools.ADC_AVG(CG.KG.kg_adc, CG.KG._校准次数)
 
     class TEMP:
         # 热电耦参数
@@ -82,6 +137,11 @@ class CG(disk_config.DiskConfig):
         满量程read_uv = 994000
         ntc_temp = 0
         热电耦温度 = tools.环形List(10000, (0, 0, 0, time.ticks_ms()))
+        k_ntc = ntc.NTC(ADC(MyPin.k_ntc, atten=ADC.ATTN_0DB), _R1阻值, _输入电压uv)
+        k_sw = Pin(MyPin.k_sw, Pin.OUT)
+        k_adc = []
+        for k_i in MyPin.k_adc:
+            k_adc.append(ADC(k_i, atten=ADC.ATTN_0DB))
 
         def get_temp(uv: float) -> float:
             """
@@ -152,26 +212,24 @@ class CG(disk_config.DiskConfig):
         # 2、MOS内阻，这是主要问题，可以选择低VGSth，低内阻MOS
         @classmethod
         async def adj(cls):
-            CG.TEMP.k_零飘 = []
-            CG.TEMP.k_max = []
-            CG.TEMP.k_min = []
-            CG.Pin.k_sw.value(1)
+            cls.k_零飘 = []
+            cls.k_max = []
+            cls.k_min = []
+            cls.k_sw.value(1)
             await asyncio.sleep(0.3)
 
             # 遍历 ADC，获取：
             # 零点
             # 最高温度
             # 最低温度
-            for k in CG.Pin.k_adc:
-                零点 = tools.ADC_AVG(k, CG.TEMP._校准次数)
-                CG.TEMP.k_零飘.append(零点)
-                CG.TEMP.k_max.append(
-                    cls.get_temp((CG.TEMP.满量程read_uv - 零点) / cls._PGA)
-                )
+            for k in cls.k_adc:
+                零点 = tools.ADC_AVG(k, cls._校准次数)
+                cls.k_零飘.append(零点)
+                cls.k_max.append(cls.get_temp((cls.满量程read_uv - 零点) / cls._PGA))
                 # CG.TEMP.k_min.append(get_temp((0 - 零点) / pga))
-                CG.TEMP.k_min.append(cls.get_temp(-零点 / cls._PGA))
+                cls.k_min.append(cls.get_temp(-零点 / cls._PGA))
 
-            CG.Pin.k_sw.value(0)
+            cls.k_sw.value(0)
 
     class POW:
         # pow参数
@@ -183,10 +241,14 @@ class CG(disk_config.DiskConfig):
         电流零飘 = 0
         输入电压 = tools.环形List(10000, (0, time.ticks_ms()))
 
+        pow_pwm = pwm.PWM(MyPin.pow_pwm, freq=24000, duty_u16=0)._init(2, 95)
+        pow_adc = ADC(MyPin.pow_adc, atten=ADC.ATTN_0DB)
+        v_adc = ADC(MyPin.v_adc, atten=ADC.ATTN_0DB)
+
         @staticmethod
         def adj():
             CG.POW.电流零飘 = tools.ADC_AVG(
-                CG.Pin.pow_adc,
+                CG.POW.pow_adc,
                 CG.POW._校准次数,
             )
 
@@ -195,8 +257,63 @@ class CG(disk_config.DiskConfig):
         _采样间隔MS = 1000
         fan_read = tools.环形List(10000, (0, time.ticks_ms()))
 
+        fan_pwm = pwm.PWM(MyPin.fan_pwm, freq=24000, duty_u16=0)._init()
+        fan_zs = Fan.Fan(MyPin.fan_read)
+
+    class UI:
+        # UI
+        _数据超时MS = 500
+        _刷新间隔MS = 300
+        _背光亮度 = 100
+
+        spi = SPI(
+            1,
+            baudrate=100_000_000,
+            polarity=0,
+            phase=0,
+            sck=MyPin.tft_SCK,
+            mosi=MyPin.tft_SDA,
+            miso=MyPin.tft_SDO,
+        )
+        st = st7796便宜.ST7796_便宜(
+            spi=spi,
+            dc=MyPin.tft_DC,
+            size=lcd.LCD.Size.st7796,
+            bl=MyPin.tft_BLK,
+            rst=MyPin.tft_RESET,
+            cs=MyPin.tft_CS,
+            旋转=1,
+            color_bit=24,
+            像素缺失=(0, 0, 0, 0),
+            逆CS=False,
+        )
+
+        st波形 = st.new_波形(
+            w起点=0,
+            h起点=320,  # 波形区域左上角 Y
+            size_w=320,
+            size_h=160,
+            多少格=998,
+            # 通道顺序：电压, PWM, 温度, 电流
+            波形像素=[5, 5, 5, 5],  # 缩放/像素相关：电压, PWM, 温度, 电流
+            data_min=[18, 0, 0, 0],  # 最小值：电压 18，其它 0
+            data_max=[
+                26,
+                100,
+                300,
+                30,
+            ],  # 最大值：电压 26V, PWM 100%, 温度 300℃, 电流 30A
+            波形色=[
+                st.color_fn(0, 0, 255),  # 电压 → 蓝
+                st.color_fn(0, 0, 0),  # PWM  → 黑
+                st.color_fn(0, 255, 0),  # 温度 → 绿
+                st.color_fn(255, 0, 0),  # 电流 → 红
+            ],
+            背景色=st.color_fn(255, 255, 255),
+        )
+
+
     class WORK:
-        # WORK
         work = False
         热压 = False
         热压进入 = False
@@ -204,65 +321,10 @@ class CG(disk_config.DiskConfig):
         热压首次足压力 = False
         热压退出 = False
         焊接进入 = False
-        
-        
+
         _热压自动上升温差 = 10
         _热压自动关闭时间 = 5
         _热压目标温度 = 100
         _目标压力 = 500 * 10 + 100
         _焊接目标温度 = 88
         _fan_pwm = 0
-
-    class Pin:
-        # ==================== LCD（只改数值，不改名字）================
-        tft_BLK = 13  # 新板背光在 IO13（LCD_LED）
-        tft_RESET = 14
-        tft_SDA = 15
-        tft_SCK = 16
-        tft_DC = 17
-        tft_CS = 18
-        tft_SDO = None
-
-        # ==================== 编码器（只改数值，名字完全不动！）================
-        左编码器A = 21  # 新板 BMQ_L_A
-        左编码器B = 47  # 新板 BMQ_L_B
-        左SW = Pin(41, Pin.IN, Pin.PULL_UP)  # 新板 JD（左旋钮按键）
-
-        右编码器A = 44  # 新板 BMQ_R_A
-        右编码器B = 43  # 新板 BMQ_R_B
-        右SW = Pin(42, Pin.IN, Pin.PULL_UP)  # 新板 JMS（右旋钮按键）
-
-        # ==================== 称重 & 热电偶（完全不变）================
-        kg_adc = ADC(7, atten=ADC.ATTN_0DB)
-        k_ntc = ADC(4, atten=ADC.ATTN_0DB)
-        k_sw = Pin(11, Pin.OUT)
-
-        k_adc = []
-        for k_i in [5, 6, 8]:
-            k_adc.append(ADC(k_i, atten=ADC.ATTN_0DB))
-
-        # ==================== 加热片（完全不变）================
-        pow_pwm = pwm.PWM(12, freq=24000, duty_u16=0)._init(5, 95)
-        pow_adc = ADC(10, atten=ADC.ATTN_0DB)
-
-        # ==================== 电机 H 桥（恢复到新板真实引脚）================
-        m_pwm1 = pwm.PWM(40, freq=24000, duty_u16=65535)._init()  # 新板 IO40
-        m_pwm2 = pwm.PWM(39, freq=24000, duty_u16=65535)._init()  # 新板 IO39
-        m_adc = ADC(1, atten=ADC.ATTN_0DB)
-
-        # ==================== 风扇（完全不变）================
-        fan_pwm = pwm.PWM(48, freq=24000, duty_u16=0)._init()
-        fan_read = 38
-
-        # ==================== 电源电压（完全不变）================
-        v_adc = ADC(9, atten=ADC.ATTN_0DB)  # IO09                    # IO09 V_ADC
-
-    class UI:
-        # UI
-        _数据超时MS = 500
-
-        spi: SPI
-
-        st: lcd.LCD
-
-        st波形: lcd.波形
